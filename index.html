@@ -10,10 +10,13 @@
         .deploy-card { transition: all 0.2s ease; border-left: 5px solid #e2e8f0; }
         .plat-btn.active { border-color: #2563eb; background-color: #eff6ff; color: #2563eb; ring: 4px; ring-color: #eff6ff; }
         #loadingOverlay { display:none; background: rgba(255,255,255,0.8); position: fixed; inset: 0; z-index: 150; align-items: center; justify-content: center; }
-        .error-field { border-color: #ef4444 !important; background-color: #fef2f2 !important; }
+        .history-item { transition: all 0.2s; border-left: 4px solid transparent; }
+        .history-item:hover { border-left-color: #2563eb; background-color: #f8fafc; }
+        /* Style for disabled button */
+        button:disabled { background-color: #cbd5e1 !important; border-color: #94a3b8 !important; cursor: not-allowed; transform: none !important; opacity: 0.7; }
     </style>
 </head>
-<body class="bg-slate-100 p-4 md:p-8 font-sans">
+<body class="bg-slate-100 p-4 md:p-8 font-sans text-slate-900">
     
     <div id="loadingOverlay">
         <div class="flex flex-col items-center">
@@ -24,9 +27,10 @@
 
     <div class="max-w-5xl mx-auto">
         <header class="bg-white p-6 rounded-2xl shadow-sm border-b-4 border-blue-600 mb-6 flex justify-between items-center text-slate-800">
-            <h1 class="text-2xl font-black italic uppercase tracking-tighter">EMS4 CLOUD</h1>
-            <div class="text-right">
-                <span id="cloudStatus" class="text-green-500 font-bold text-[10px] uppercase">● System Live</span>
+            <h1 class="text-2xl font-black italic uppercase tracking-tighter">EMS4 PLAN</h1>
+            <div class="text-right flex flex-col items-end">
+                <span id="cloudStatus" class="text-green-500 font-bold text-[10px] uppercase tracking-widest animate-pulse">● System Live</span>
+                <span id="activePlatDisplay" class="text-slate-400 font-black text-[9px] uppercase tracking-tighter italic mt-1">Ready</span>
             </div>
         </header>
 
@@ -36,34 +40,43 @@
             <button onclick="selectPlatform('AUTOMAT', 20)" id="btn-AUTOMAT" class="plat-btn bg-white p-4 rounded-xl shadow-sm border-2 border-transparent font-black transition-all text-slate-600 uppercase italic">Automat (20)</button>
         </div>
 
-        <div id="mainSection" class="hidden">
-            <div class="bg-white p-6 rounded-2xl shadow-sm mb-6 grid grid-cols-1 md:grid-cols-3 gap-6 border border-slate-200">
+        <div id="mainSection" class="hidden space-y-6">
+            <div class="bg-white p-6 rounded-2xl shadow-sm grid grid-cols-1 md:grid-cols-3 gap-6 border border-slate-200">
                 <div>
                     <label class="block text-[10px] font-black text-slate-400 mb-1 uppercase tracking-widest">Deploys Count</label>
-                    <input type="number" id="deployCount" oninput="generateDeploys()" class="w-full p-2 border-2 rounded-lg font-black text-blue-600 text-lg text-center">
+                    <input type="number" id="deployCount" oninput="triggerChange(); generateDeploys();" class="w-full p-2 border-2 rounded-lg font-black text-blue-600 text-lg text-center bg-white">
                 </div>
                 <div>
                     <label class="block text-[10px] font-black text-blue-500 mb-1 uppercase italic">🔑 Filter (Code Mot)</label>
-                    <input type="text" id="filterKeyword" class="w-full p-2 border-2 border-blue-100 rounded-lg font-bold text-blue-700 bg-blue-50">
+                    <input type="text" id="filterKeyword" oninput="triggerChange()" class="w-full p-2 border-2 border-blue-100 rounded-lg font-bold text-blue-700 bg-blue-50 focus:bg-white outline-none">
                 </div>
-                <div class="p-3 bg-slate-50 rounded-xl text-center">
-                    <span class="text-[10px] font-black text-slate-400 uppercase">Live Distribution</span>
-                    <div id="distOutput" class="text-xs font-black text-blue-700 mt-1"></div>
+                <div class="p-3 bg-slate-50 rounded-xl text-center flex flex-col justify-center">
+                    <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Live Distribution</span>
+                    <div id="distOutput" class="text-[11px] font-black text-blue-700 mt-1"></div>
                 </div>
             </div>
 
             <div id="deploysContainer" class="space-y-4"></div>
 
-            <div class="mt-10 sticky bottom-4">
-                <button onclick="processSave()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-5 rounded-2xl font-black text-xl shadow-2xl transition active:scale-95 border-b-4 border-blue-800 uppercase italic">
+            <div class="sticky bottom-4 z-10 shadow-2xl">
+                <button id="saveBtn" disabled onclick="processSave()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-5 rounded-2xl font-black text-xl transition active:scale-95 border-b-4 border-blue-800 uppercase italic">
                     Save Changes & Notify Group
                 </button>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 mt-10 overflow-hidden mb-20">
+                <div class="bg-slate-900 p-4 flex justify-between items-center">
+                    <h2 class="text-white font-black italic text-sm uppercase tracking-widest flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        Last Updates Summary
+                    </h2>
+                </div>
+                <div id="historyList" class="divide-y divide-slate-100 max-h-[500px] overflow-y-auto bg-white"></div>
             </div>
         </div>
     </div>
 
     <script>
-        // --- CONFIG ---
         const firebaseConfig = {
           apiKey: "AIzaSyAFR96bibEGLaMroqFZCLcSHyCoAdewz78",
           authDomain: "ems4-reporting.firebaseapp.com",
@@ -75,18 +88,19 @@
         };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
-
         const telegramToken = '8445418590:AAEzun8AqYrkmFnzMoXaz3UBIQRTQCgQHeI'; 
         const telegramChatId = '-5224398844'; 
-
-        // UPDATED LINK
         const currentUrl = "https://ems4-plan.vercel.app"; 
 
         let currentPlatform = "";
         let boitesTotal = 0;
         let oldCloudData = null;
 
-        // Auto-load platform from URL parameter
+        // Function to enable button when something changes
+        function triggerChange() {
+            document.getElementById('saveBtn').disabled = false;
+        }
+
         window.onload = function() {
             const urlParams = new URLSearchParams(window.location.search);
             const plat = urlParams.get('plat');
@@ -100,6 +114,8 @@
             currentPlatform = p;
             boitesTotal = count;
             document.getElementById('loadingOverlay').style.display = 'flex';
+            document.getElementById('activePlatDisplay').innerText = "PLATFORM: " + p;
+            document.getElementById('saveBtn').disabled = true; // Reset button
             
             document.querySelectorAll('.plat-btn').forEach(b => b.classList.remove('active', 'border-blue-600', 'text-blue-600'));
             const activeBtn = document.getElementById('btn-'+p);
@@ -109,7 +125,7 @@
 
             db.ref('ems4/plans/' + currentPlatform + '/current').once('value', (snapshot) => {
                 oldCloudData = snapshot.val();
-                if (oldCloudData && oldCloudData.deploys) {
+                if (oldCloudData) {
                     document.getElementById('deployCount').value = oldCloudData.deploys.length;
                     document.getElementById('filterKeyword').value = oldCloudData.filter || "";
                     generateDeploys(oldCloudData.deploys);
@@ -119,6 +135,49 @@
                 }
                 document.getElementById('loadingOverlay').style.display = 'none';
             });
+            loadHistory();
+        }
+
+        function loadHistory() {
+            db.ref('ems4/plans/' + currentPlatform + '/history').limitToLast(10).on('value', (snapshot) => {
+                const list = document.getElementById('historyList');
+                list.innerHTML = "";
+                const data = snapshot.val();
+                if (!data) return;
+
+                Object.keys(data).reverse().forEach(key => {
+                    const item = data[key];
+                    list.innerHTML += `
+                        <div class="history-item p-4 flex justify-between items-center border-l-4 border-transparent">
+                            <div class="flex flex-col gap-1 overflow-hidden">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-[10px] font-black bg-slate-100 px-2 py-0.5 rounded text-slate-800 uppercase italic">${item.filter}</span>
+                                    <span class="text-[9px] text-slate-400 font-bold tracking-tight">${item.timestamp}</span>
+                                </div>
+                                <div class="text-[10px] text-red-600 font-bold truncate tracking-tight uppercase">
+                                    📝 ${item.summary || 'Initial Set'}
+                                </div>
+                            </div>
+                            <button onclick="loadHistoryToUI('${key}')" class="bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white px-3 py-2 rounded-lg text-[9px] font-black transition shrink-0 ml-4">
+                                LOAD
+                            </button>
+                        </div>`;
+                });
+            });
+        }
+
+        async function loadHistoryToUI(key) {
+            document.getElementById('loadingOverlay').style.display = 'flex';
+            const snapshot = await db.ref('ems4/plans/' + currentPlatform + '/history/' + key).once('value');
+            const data = snapshot.val();
+            if (data) {
+                document.getElementById('deployCount').value = data.deploys.length;
+                document.getElementById('filterKeyword').value = data.filter;
+                generateDeploys(data.deploys);
+                document.getElementById('saveBtn').disabled = true;
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+            document.getElementById('loadingOverlay').style.display = 'none';
         }
 
         function generateDeploys(savedData = null) {
@@ -133,23 +192,22 @@
                 const bCount = base + (i < remainder ? 1 : 0);
                 distArray.push(bCount);
                 const d = (savedData && savedData[i]) ? savedData[i] : { from: '', id: '', batch: '10/3000P', rules: 'SELECT ALL IPS', ips: '' };
-                
                 container.innerHTML += `
-                    <div class="deploy-card bg-white p-6 rounded-2xl shadow-sm border border-slate-200" data-index="${i}">
-                        <div class="flex justify-between items-center mb-4 border-b pb-2">
-                            <span class="bg-slate-800 text-white text-[10px] px-3 py-1 rounded-full font-black uppercase italic">Deploy ${i+1}</span>
-                            <span class="text-blue-600 font-black text-[10px] uppercase italic underline">${bCount} Boites</span>
+                    <div class="deploy-card bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                        <div class="flex justify-between items-center mb-4 border-b pb-2 text-[10px] font-black">
+                            <span class="bg-slate-800 text-white px-3 py-1 rounded-full uppercase italic">DEPLOY ${i+1}</span>
+                            <span class="text-blue-600 underline">${bCount} BOITES</span>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
-                            <input type="text" class="from-val p-2 border rounded text-xs font-bold uppercase" value="${d.from}" placeholder="FROM">
-                            <input type="text" class="id-val p-2 border rounded text-xs font-black text-blue-600 uppercase" value="${d.id}" placeholder="ID">
-                            <select class="batch-val p-2 border rounded text-xs font-bold uppercase">
+                            <input type="text" oninput="triggerChange()" class="from-val p-2 border rounded text-xs font-bold uppercase focus:ring-1 focus:ring-blue-500" value="${d.from}" placeholder="FROM">
+                            <input type="text" oninput="triggerChange()" class="id-val p-2 border rounded text-xs font-black text-blue-600 uppercase focus:ring-1 focus:ring-blue-500" value="${d.id}" placeholder="ID">
+                            <select onchange="triggerChange()" class="batch-val p-2 border rounded text-xs font-bold uppercase">
                                 <option ${d.batch == '10/3000P' ? 'selected' : ''}>10/3000P</option>
                                 <option ${d.batch == '5/3000P' ? 'selected' : ''}>5/3000P</option>
                                 <option ${d.batch == '3/3000P' ? 'selected' : ''}>3/3000P</option>
                                 <option ${d.batch == '0/0 Parallel' ? 'selected' : ''}>0/0 Parallel</option>
                             </select>
-                            <select class="rules-val p-2 border rounded text-xs font-bold uppercase">
+                            <select onchange="triggerChange()" class="rules-val p-2 border rounded text-xs font-bold uppercase">
                                 <option ${d.rules == 'SELECT ALL IPS' ? 'selected' : ''}>SELECT ALL IPS</option>
                                 <option ${d.rules == 'SELECT 30 IPS MAX' ? 'selected' : ''}>SELECT 30 IPS MAX</option>
                                 <option ${d.rules == 'RANDOM ON SELECTED' ? 'selected' : ''}>RANDOM ON SELECTED</option>
@@ -157,7 +215,7 @@
                                 <option ${d.rules == '2 ips RANDOM ON SERVER SELECTED' ? 'selected' : ''}>2 ips RANDOM ON SERVER SELECTED</option>
                             </select>
                         </div>
-                        <textarea class="ips-val w-full p-2 border rounded text-[10px] font-mono bg-slate-50 uppercase italic" rows="2" placeholder="IP LIST">${d.ips}</textarea>
+                        <textarea oninput="triggerChange()" class="ips-val w-full p-2 border rounded text-[10px] font-mono bg-slate-50 uppercase focus:bg-white" rows="2" placeholder="IP LIST">${d.ips}</textarea>
                     </div>`;
             }
             document.getElementById('distOutput').innerText = distArray.join(' | ');
@@ -167,7 +225,7 @@
             const currentFilter = document.getElementById('filterKeyword').value.trim();
             const cards = document.querySelectorAll('.deploy-card');
             let newData = [];
-            let changes = [];
+            let changesArray = [];
 
             cards.forEach((c, idx) => {
                 const d = {
@@ -179,51 +237,43 @@
                 };
                 newData.push(d);
 
-                if (oldCloudData && oldCloudData.deploys[idx]) {
+                if (oldCloudData && oldCloudData.deploys && oldCloudData.deploys[idx]) {
                     const old = oldCloudData.deploys[idx];
-                    let fieldChanges = [];
-                    if (d.from !== old.from) fieldChanges.push("From");
-                    if (d.id !== old.id) fieldChanges.push("ID");
-                    if (d.batch !== old.batch) fieldChanges.push("Batch");
-                    if (d.rules !== old.rules) fieldChanges.push("Rules");
-                    if (d.ips !== old.ips) fieldChanges.push("IPs");
-
-                    if (fieldChanges.length > 0) {
-                        changes.push(`📝 Deploy ${idx + 1}: ${fieldChanges.join(', ')}`);
-                    }
+                    let diffs = [];
+                    if (d.from !== old.from) diffs.push("From");
+                    if (d.id !== old.id) diffs.push("ID");
+                    if (d.batch !== old.batch) diffs.push("Batch");
+                    if (d.rules !== old.rules) diffs.push("Rules");
+                    if (d.ips !== old.ips) diffs.push("IPs");
+                    if (diffs.length > 0) changesArray.push(`D${idx+1}: ${diffs.join(',')}`);
                 } else {
-                    changes.push(`➕ Deploy ${idx + 1}: New Added`);
+                    changesArray.push(`D${idx+1}: New`);
                 }
             });
 
-            if (oldCloudData && currentFilter !== oldCloudData.filter) {
-                changes.unshift(`🎯 Filter Modifié: ${currentFilter}`);
-            }
+            const summaryLog = changesArray.length > 0 ? changesArray.join(' | ') : "Refresh UI";
 
-            if (newData.some(d => !d.from || !d.id || !d.ips)) { alert("All fields must be filled!"); return; }
+            if (newData.some(d => !d.from || !d.id || !d.ips)) { alert("Fill all fields!"); return; }
 
             document.getElementById('loadingOverlay').style.display = 'flex';
-            const timestamp = new Date().toLocaleString();
-            
-            // Generate direct link for the specific platform
-            const directLink = `${currentUrl}?plat=${currentPlatform}`;
+            const timestamp = new Date().toLocaleString('en-GB', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
 
             try {
-                await db.ref('ems4/plans/' + currentPlatform + '/current').set({ deploys: newData, filter: currentFilter, timestamp });
-                await db.ref('ems4/plans/' + currentPlatform + '/history').push({ deploys: newData, filter: currentFilter, timestamp });
+                const saveObj = { deploys: newData, filter: currentFilter, timestamp, summary: summaryLog };
+                await db.ref('ems4/plans/' + currentPlatform + '/current').set(saveObj);
+                await db.ref('ems4/plans/' + currentPlatform + '/history').push(saveObj);
 
-                let changeLog = changes.length > 0 ? changes.join('\n') : "✨ Refresh Structure";
-                
-                const finalMsg = `🚀 *EMS4 PLAN UPDATED* \n━━━━━━━━━━━━━━━\n🖥 Platform: #${currentPlatform}\n🎯 Filter: ${currentFilter}\n━━━━━━━━━━━━━━━\n\n${changeLog}\n\n🔗 *VIEW MODIFICATION:* \n${directLink}\n\n👷‍♂️ _Veuillez vérifier l'interface pour lancer._`;
+                const botMsg = `🚀 *UPDATE [#${currentPlatform}]*\n━━━━━━━━━━━━━━━\n🎯 Filter: ${currentFilter}\n🕒 Time: ${timestamp}\n📝 Log: ${summaryLog}\n━━━━━━━━━━━━━━━\n🔗 ${currentUrl}?plat=${currentPlatform}`;
 
                 await fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ chat_id: telegramChatId, text: finalMsg, parse_mode: 'Markdown' })
+                    body: JSON.stringify({ chat_id: telegramChatId, text: botMsg, parse_mode: 'Markdown' })
                 });
 
-                alert("✅ Saved! Notification sent to Group.");
-                oldCloudData = { deploys: newData, filter: currentFilter };
+                alert("✅ Saved!");
+                oldCloudData = saveObj;
+                document.getElementById('saveBtn').disabled = true; // Disable after successful save
             } catch (e) { alert("Error: " + e.message); }
             document.getElementById('loadingOverlay').style.display = 'none';
         }
