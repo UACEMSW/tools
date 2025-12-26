@@ -12,7 +12,6 @@
         #loadingOverlay { display:none; background: rgba(255,255,255,0.8); position: fixed; inset: 0; z-index: 150; align-items: center; justify-content: center; }
         .history-item { transition: all 0.2s; border-left: 4px solid transparent; }
         .history-item:hover { border-left-color: #2563eb; background-color: #f8fafc; }
-        /* Style for disabled button */
         button:disabled { background-color: #cbd5e1 !important; border-color: #94a3b8 !important; cursor: not-allowed; transform: none !important; opacity: 0.7; }
     </style>
 </head>
@@ -44,11 +43,11 @@
             <div class="bg-white p-6 rounded-2xl shadow-sm grid grid-cols-1 md:grid-cols-3 gap-6 border border-slate-200">
                 <div>
                     <label class="block text-[10px] font-black text-slate-400 mb-1 uppercase tracking-widest">Deploys Count</label>
-                    <input type="number" id="deployCount" oninput="triggerChange(); generateDeploys();" class="w-full p-2 border-2 rounded-lg font-black text-blue-600 text-lg text-center bg-white">
+                    <input type="number" id="deployCount" oninput="checkIfChanged(); generateDeploys();" class="w-full p-2 border-2 rounded-lg font-black text-blue-600 text-lg text-center bg-white">
                 </div>
                 <div>
                     <label class="block text-[10px] font-black text-blue-500 mb-1 uppercase italic">🔑 Filter (Code Mot)</label>
-                    <input type="text" id="filterKeyword" oninput="triggerChange()" class="w-full p-2 border-2 border-blue-100 rounded-lg font-bold text-blue-700 bg-blue-50 focus:bg-white outline-none">
+                    <input type="text" id="filterKeyword" oninput="checkIfChanged()" class="w-full p-2 border-2 border-blue-100 rounded-lg font-bold text-blue-700 bg-blue-50 focus:bg-white outline-none">
                 </div>
                 <div class="p-3 bg-slate-50 rounded-xl text-center flex flex-col justify-center">
                     <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Live Distribution</span>
@@ -96,9 +95,41 @@
         let boitesTotal = 0;
         let oldCloudData = null;
 
-        // Function to enable button when something changes
-        function triggerChange() {
-            document.getElementById('saveBtn').disabled = false;
+        // VERIFY REAL CHANGES
+        function checkIfChanged() {
+            if (!oldCloudData) return;
+            
+            const currentFilter = document.getElementById('filterKeyword').value.trim();
+            const currentDeploysNum = parseInt(document.getElementById('deployCount').value);
+            
+            const cards = document.querySelectorAll('.deploy-card');
+            let hasChanges = false;
+
+            // Check if filter or count changed
+            if (currentFilter !== (oldCloudData.filter || "") || currentDeploysNum !== (oldCloudData.deploys ? oldCloudData.deploys.length : 0)) {
+                hasChanges = true;
+            }
+
+            // Check each card data
+            cards.forEach((c, idx) => {
+                if (hasChanges) return;
+                const old = (oldCloudData.deploys && oldCloudData.deploys[idx]) ? oldCloudData.deploys[idx] : null;
+                if (!old) { hasChanges = true; return; }
+
+                const d = {
+                    from: c.querySelector('.from-val').value.trim(),
+                    id: c.querySelector('.id-val').value.trim(),
+                    batch: c.querySelector('.batch-val').value,
+                    rules: c.querySelector('.rules-val').value,
+                    ips: c.querySelector('.ips-val').value.trim()
+                };
+
+                if (d.from !== old.from || d.id !== old.id || d.batch !== old.batch || d.rules !== old.rules || d.ips !== old.ips) {
+                    hasChanges = true;
+                }
+            });
+
+            document.getElementById('saveBtn').disabled = !hasChanges;
         }
 
         window.onload = function() {
@@ -115,12 +146,10 @@
             boitesTotal = count;
             document.getElementById('loadingOverlay').style.display = 'flex';
             document.getElementById('activePlatDisplay').innerText = "PLATFORM: " + p;
-            document.getElementById('saveBtn').disabled = true; // Reset button
             
             document.querySelectorAll('.plat-btn').forEach(b => b.classList.remove('active', 'border-blue-600', 'text-blue-600'));
             const activeBtn = document.getElementById('btn-'+p);
             if(activeBtn) activeBtn.classList.add('active', 'border-blue-600', 'text-blue-600');
-            
             document.getElementById('mainSection').classList.remove('hidden');
 
             db.ref('ems4/plans/' + currentPlatform + '/current').once('value', (snapshot) => {
@@ -133,6 +162,7 @@
                     document.getElementById('deployCount').value = 8;
                     generateDeploys();
                 }
+                document.getElementById('saveBtn').disabled = true; // Stay disabled after load
                 document.getElementById('loadingOverlay').style.display = 'none';
             });
             loadHistory();
@@ -144,7 +174,6 @@
                 list.innerHTML = "";
                 const data = snapshot.val();
                 if (!data) return;
-
                 Object.keys(data).reverse().forEach(key => {
                     const item = data[key];
                     list.innerHTML += `
@@ -158,9 +187,7 @@
                                     📝 ${item.summary || 'Initial Set'}
                                 </div>
                             </div>
-                            <button onclick="loadHistoryToUI('${key}')" class="bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white px-3 py-2 rounded-lg text-[9px] font-black transition shrink-0 ml-4">
-                                LOAD
-                            </button>
+                            <button onclick="loadHistoryToUI('${key}')" class="bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white px-3 py-2 rounded-lg text-[9px] font-black transition shrink-0 ml-4">LOAD</button>
                         </div>`;
                 });
             });
@@ -199,15 +226,15 @@
                             <span class="text-blue-600 underline">${bCount} BOITES</span>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
-                            <input type="text" oninput="triggerChange()" class="from-val p-2 border rounded text-xs font-bold uppercase focus:ring-1 focus:ring-blue-500" value="${d.from}" placeholder="FROM">
-                            <input type="text" oninput="triggerChange()" class="id-val p-2 border rounded text-xs font-black text-blue-600 uppercase focus:ring-1 focus:ring-blue-500" value="${d.id}" placeholder="ID">
-                            <select onchange="triggerChange()" class="batch-val p-2 border rounded text-xs font-bold uppercase">
+                            <input type="text" oninput="checkIfChanged()" class="from-val p-2 border rounded text-xs font-bold uppercase focus:ring-1 focus:ring-blue-500" value="${d.from}" placeholder="FROM">
+                            <input type="text" oninput="checkIfChanged()" class="id-val p-2 border rounded text-xs font-black text-blue-600 uppercase focus:ring-1 focus:ring-blue-500" value="${d.id}" placeholder="ID">
+                            <select onchange="checkIfChanged()" class="batch-val p-2 border rounded text-xs font-bold uppercase">
                                 <option ${d.batch == '10/3000P' ? 'selected' : ''}>10/3000P</option>
                                 <option ${d.batch == '5/3000P' ? 'selected' : ''}>5/3000P</option>
                                 <option ${d.batch == '3/3000P' ? 'selected' : ''}>3/3000P</option>
                                 <option ${d.batch == '0/0 Parallel' ? 'selected' : ''}>0/0 Parallel</option>
                             </select>
-                            <select onchange="triggerChange()" class="rules-val p-2 border rounded text-xs font-bold uppercase">
+                            <select onchange="checkIfChanged()" class="rules-val p-2 border rounded text-xs font-bold uppercase">
                                 <option ${d.rules == 'SELECT ALL IPS' ? 'selected' : ''}>SELECT ALL IPS</option>
                                 <option ${d.rules == 'SELECT 30 IPS MAX' ? 'selected' : ''}>SELECT 30 IPS MAX</option>
                                 <option ${d.rules == 'RANDOM ON SELECTED' ? 'selected' : ''}>RANDOM ON SELECTED</option>
@@ -215,7 +242,7 @@
                                 <option ${d.rules == '2 ips RANDOM ON SERVER SELECTED' ? 'selected' : ''}>2 ips RANDOM ON SERVER SELECTED</option>
                             </select>
                         </div>
-                        <textarea oninput="triggerChange()" class="ips-val w-full p-2 border rounded text-[10px] font-mono bg-slate-50 uppercase focus:bg-white" rows="2" placeholder="IP LIST">${d.ips}</textarea>
+                        <textarea oninput="checkIfChanged()" class="ips-val w-full p-2 border rounded text-[10px] font-mono bg-slate-50 uppercase focus:bg-white" rows="2" placeholder="IP LIST">${d.ips}</textarea>
                     </div>`;
             }
             document.getElementById('distOutput').innerText = distArray.join(' | ');
@@ -251,7 +278,14 @@
                 }
             });
 
-            const summaryLog = changesArray.length > 0 ? changesArray.join(' | ') : "Refresh UI";
+            const summaryLog = changesArray.length > 0 ? changesArray.join(' | ') : "";
+            
+            // SECURITY: If no real text changes, don't send anything
+            if (!summaryLog && currentFilter === oldCloudData.filter) {
+                alert("No actual changes found.");
+                document.getElementById('saveBtn').disabled = true;
+                return;
+            }
 
             if (newData.some(d => !d.from || !d.id || !d.ips)) { alert("Fill all fields!"); return; }
 
@@ -259,7 +293,7 @@
             const timestamp = new Date().toLocaleString('en-GB', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
 
             try {
-                const saveObj = { deploys: newData, filter: currentFilter, timestamp, summary: summaryLog };
+                const saveObj = { deploys: newData, filter: currentFilter, timestamp, summary: summaryLog || "Refresh" };
                 await db.ref('ems4/plans/' + currentPlatform + '/current').set(saveObj);
                 await db.ref('ems4/plans/' + currentPlatform + '/history').push(saveObj);
 
@@ -271,9 +305,9 @@
                     body: JSON.stringify({ chat_id: telegramChatId, text: botMsg, parse_mode: 'Markdown' })
                 });
 
-                alert("✅ Saved!");
+                alert("✅ Changes Synced!");
                 oldCloudData = saveObj;
-                document.getElementById('saveBtn').disabled = true; // Disable after successful save
+                document.getElementById('saveBtn').disabled = true;
             } catch (e) { alert("Error: " + e.message); }
             document.getElementById('loadingOverlay').style.display = 'none';
         }
