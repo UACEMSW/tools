@@ -2,105 +2,231 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Professional Tools Hub</title>
+    <title>EMS4 | Smart Cloud Sync</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
     <style>
-        :root {
-            --bg: #f1f5f9;
-            --primary: #2563eb;
-            --text: #1e293b;
-        }
-        body {
-            font-family: 'Inter', sans-serif;
-            background: var(--bg);
-            margin: 0;
-            padding: 40px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        h1 { color: var(--text); margin-bottom: 40px; }
-        
-        /* Grid dyal les tools */
-        .tools-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 25px;
-            width: 100%;
-            max-width: 1000px;
-        }
-
-        /* Card Style */
-        .tool-card {
-            background: white;
-            padding: 24px;
-            border-radius: 16px;
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
-            transition: transform 0.2s, box-shadow 0.2s;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-        }
-
-        .tool-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
-        }
-
-        .tool-card h3 { margin: 0 0 10px 0; color: var(--text); }
-        .tool-card p { color: #64748b; font-size: 14px; margin-bottom: 20px; line-height: 1.5; }
-
-        .btn-launch {
-            background: var(--primary);
-            color: white;
-            text-decoration: none;
-            padding: 10px;
-            border-radius: 8px;
-            text-align: center;
-            font-weight: 600;
-            font-size: 14px;
-            transition: background 0.2s;
-        }
-
-        .btn-launch:hover { background: #1d4ed8; }
-
-        .badge-new {
-            background: #dcfce7;
-            color: #166534;
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 10px;
-            font-weight: bold;
-            display: inline-block;
-            margin-bottom: 10px;
-        }
+        .deploy-card { transition: all 0.2s ease; border-left: 5px solid #e2e8f0; }
+        .plat-btn.active { border-color: #2563eb; background-color: #eff6ff; color: #2563eb; ring: 4px; ring-color: #eff6ff; }
+        #loadingOverlay { display:none; background: rgba(255,255,255,0.8); position: fixed; inset: 0; z-index: 150; align-items: center; justify-content: center; }
+        .error-field { border-color: #ef4444 !important; background-color: #fef2f2 !important; }
     </style>
 </head>
-<body>
+<body class="bg-slate-100 p-4 md:p-8 font-sans">
+    
+    <div id="loadingOverlay">
+        <div class="flex flex-col items-center">
+            <div class="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+            <div class="font-black text-blue-600 uppercase tracking-widest text-xs">Syncing Cloud...</div>
+        </div>
+    </div>
 
-    <h1>Youness Tool Hub</h1>
-
-    <div class="tools-grid">
-        
-        <div class="tool-card">
-            <div>
-                <span class="badge-new">ACTIVE</span>
-                <h3>Range Splitter</h3>
-                <p>Divide large numbers into professional ranges and export them directly to Excel.</p>
+    <div class="max-w-5xl mx-auto">
+        <header class="bg-white p-6 rounded-2xl shadow-sm border-b-4 border-blue-600 mb-6 flex justify-between items-center text-slate-800">
+            <h1 class="text-2xl font-black italic uppercase tracking-tighter">EMS4 CLOUD</h1>
+            <div class="text-right">
+                <span id="cloudStatus" class="text-green-500 font-bold text-[10px] uppercase">● System Live</span>
             </div>
-            <a href="splitter.html" class="btn-launch">Open Tool</a>
+        </header>
+
+        <div class="grid grid-cols-3 gap-4 mb-6">
+            <button onclick="selectPlatform('WEB', 100)" id="btn-WEB" class="plat-btn bg-white p-4 rounded-xl shadow-sm border-2 border-transparent font-black transition-all text-slate-600 uppercase italic">Web (100)</button>
+            <button onclick="selectPlatform('SELENIUM', 75)" id="btn-SELENIUM" class="plat-btn bg-white p-4 rounded-xl shadow-sm border-2 border-transparent font-black transition-all text-slate-600 uppercase italic">Selenium (75)</button>
+            <button onclick="selectPlatform('AUTOMAT', 20)" id="btn-AUTOMAT" class="plat-btn bg-white p-4 rounded-xl shadow-sm border-2 border-transparent font-black transition-all text-slate-600 uppercase italic">Automat (20)</button>
         </div>
 
-        <div class="tool-card" style="opacity: 0.7;">
-            <div>
-                <span class="badge-new" style="background:#fef3c7; color:#92400e;">COMING SOON</span>
-                <h3>Data Formatter</h3>
-                <p>Clean and format your raw data for Google Sheets automatically.</p>
+        <div id="mainSection" class="hidden">
+            <div class="bg-white p-6 rounded-2xl shadow-sm mb-6 grid grid-cols-1 md:grid-cols-3 gap-6 border border-slate-200">
+                <div>
+                    <label class="block text-[10px] font-black text-slate-400 mb-1 uppercase tracking-widest">Deploys Count</label>
+                    <input type="number" id="deployCount" oninput="generateDeploys()" class="w-full p-2 border-2 rounded-lg font-black text-blue-600 text-lg text-center">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black text-blue-500 mb-1 uppercase italic">🔑 Filter (Code Mot)</label>
+                    <input type="text" id="filterKeyword" class="w-full p-2 border-2 border-blue-100 rounded-lg font-bold text-blue-700 bg-blue-50">
+                </div>
+                <div class="p-3 bg-slate-50 rounded-xl text-center">
+                    <span class="text-[10px] font-black text-slate-400 uppercase">Live Distribution</span>
+                    <div id="distOutput" class="text-xs font-black text-blue-700 mt-1"></div>
+                </div>
             </div>
-            <a href="#" class="btn-launch" style="background:#94a3b8; cursor:not-allowed;">Locked</a>
-        </div>
 
-        </div>
+            <div id="deploysContainer" class="space-y-4"></div>
 
+            <div class="mt-10 sticky bottom-4">
+                <button onclick="processSave()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-5 rounded-2xl font-black text-xl shadow-2xl transition active:scale-95 border-b-4 border-blue-800 uppercase italic">
+                    Save Changes & Notify Group
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- CONFIG ---
+        const firebaseConfig = {
+          apiKey: "AIzaSyAFR96bibEGLaMroqFZCLcSHyCoAdewz78",
+          authDomain: "ems4-reporting.firebaseapp.com",
+          databaseURL: "https://ems4-reporting-default-rtdb.firebaseio.com",
+          projectId: "ems4-reporting",
+          storageBucket: "ems4-reporting.firebasestorage.app",
+          messagingSenderId: "290747078412",
+          appId: "1:290747078412:web:f1ddc2273dc07cc6e55b29"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        const telegramToken = '8445418590:AAEzun8AqYrkmFnzMoXaz3UBIQRTQCgQHeI'; 
+        const telegramChatId = '-5224398844'; 
+
+        // UPDATED LINK
+        const currentUrl = "https://ems4-plan.vercel.app"; 
+
+        let currentPlatform = "";
+        let boitesTotal = 0;
+        let oldCloudData = null;
+
+        // Auto-load platform from URL parameter
+        window.onload = function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const plat = urlParams.get('plat');
+            if (plat) {
+                const count = plat === 'WEB' ? 100 : (plat === 'SELENIUM' ? 75 : 20);
+                selectPlatform(plat, count);
+            }
+        };
+
+        async function selectPlatform(p, count) {
+            currentPlatform = p;
+            boitesTotal = count;
+            document.getElementById('loadingOverlay').style.display = 'flex';
+            
+            document.querySelectorAll('.plat-btn').forEach(b => b.classList.remove('active', 'border-blue-600', 'text-blue-600'));
+            const activeBtn = document.getElementById('btn-'+p);
+            if(activeBtn) activeBtn.classList.add('active', 'border-blue-600', 'text-blue-600');
+            
+            document.getElementById('mainSection').classList.remove('hidden');
+
+            db.ref('ems4/plans/' + currentPlatform + '/current').once('value', (snapshot) => {
+                oldCloudData = snapshot.val();
+                if (oldCloudData && oldCloudData.deploys) {
+                    document.getElementById('deployCount').value = oldCloudData.deploys.length;
+                    document.getElementById('filterKeyword').value = oldCloudData.filter || "";
+                    generateDeploys(oldCloudData.deploys);
+                } else {
+                    document.getElementById('deployCount').value = 8;
+                    generateDeploys();
+                }
+                document.getElementById('loadingOverlay').style.display = 'none';
+            });
+        }
+
+        function generateDeploys(savedData = null) {
+            const num = parseInt(document.getElementById('deployCount').value) || 0;
+            const container = document.getElementById('deploysContainer');
+            container.innerHTML = "";
+            const base = Math.floor(boitesTotal / num);
+            const remainder = boitesTotal % num;
+            let distArray = [];
+
+            for (let i = 0; i < num; i++) {
+                const bCount = base + (i < remainder ? 1 : 0);
+                distArray.push(bCount);
+                const d = (savedData && savedData[i]) ? savedData[i] : { from: '', id: '', batch: '10/3000P', rules: 'SELECT ALL IPS', ips: '' };
+                
+                container.innerHTML += `
+                    <div class="deploy-card bg-white p-6 rounded-2xl shadow-sm border border-slate-200" data-index="${i}">
+                        <div class="flex justify-between items-center mb-4 border-b pb-2">
+                            <span class="bg-slate-800 text-white text-[10px] px-3 py-1 rounded-full font-black uppercase italic">Deploy ${i+1}</span>
+                            <span class="text-blue-600 font-black text-[10px] uppercase italic underline">${bCount} Boites</span>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
+                            <input type="text" class="from-val p-2 border rounded text-xs font-bold uppercase" value="${d.from}" placeholder="FROM">
+                            <input type="text" class="id-val p-2 border rounded text-xs font-black text-blue-600 uppercase" value="${d.id}" placeholder="ID">
+                            <select class="batch-val p-2 border rounded text-xs font-bold uppercase">
+                                <option ${d.batch == '10/3000P' ? 'selected' : ''}>10/3000P</option>
+                                <option ${d.batch == '5/3000P' ? 'selected' : ''}>5/3000P</option>
+                                <option ${d.batch == '3/3000P' ? 'selected' : ''}>3/3000P</option>
+                                <option ${d.batch == '0/0 Parallel' ? 'selected' : ''}>0/0 Parallel</option>
+                            </select>
+                            <select class="rules-val p-2 border rounded text-xs font-bold uppercase">
+                                <option ${d.rules == 'SELECT ALL IPS' ? 'selected' : ''}>SELECT ALL IPS</option>
+                                <option ${d.rules == 'SELECT 30 IPS MAX' ? 'selected' : ''}>SELECT 30 IPS MAX</option>
+                                <option ${d.rules == 'RANDOM ON SELECTED' ? 'selected' : ''}>RANDOM ON SELECTED</option>
+                                <option ${d.rules == 'RANDOM ON SERVER SELECTED' ? 'selected' : ''}>RANDOM ON SERVER SELECTED</option>
+                                <option ${d.rules == '2 ips RANDOM ON SERVER SELECTED' ? 'selected' : ''}>2 ips RANDOM ON SERVER SELECTED</option>
+                            </select>
+                        </div>
+                        <textarea class="ips-val w-full p-2 border rounded text-[10px] font-mono bg-slate-50 uppercase italic" rows="2" placeholder="IP LIST">${d.ips}</textarea>
+                    </div>`;
+            }
+            document.getElementById('distOutput').innerText = distArray.join(' | ');
+        }
+
+        async function processSave() {
+            const currentFilter = document.getElementById('filterKeyword').value.trim();
+            const cards = document.querySelectorAll('.deploy-card');
+            let newData = [];
+            let changes = [];
+
+            cards.forEach((c, idx) => {
+                const d = {
+                    from: c.querySelector('.from-val').value.trim(),
+                    id: c.querySelector('.id-val').value.trim(),
+                    batch: c.querySelector('.batch-val').value,
+                    rules: c.querySelector('.rules-val').value,
+                    ips: c.querySelector('.ips-val').value.trim()
+                };
+                newData.push(d);
+
+                if (oldCloudData && oldCloudData.deploys[idx]) {
+                    const old = oldCloudData.deploys[idx];
+                    let fieldChanges = [];
+                    if (d.from !== old.from) fieldChanges.push("From");
+                    if (d.id !== old.id) fieldChanges.push("ID");
+                    if (d.batch !== old.batch) fieldChanges.push("Batch");
+                    if (d.rules !== old.rules) fieldChanges.push("Rules");
+                    if (d.ips !== old.ips) fieldChanges.push("IPs");
+
+                    if (fieldChanges.length > 0) {
+                        changes.push(`📝 Deploy ${idx + 1}: ${fieldChanges.join(', ')}`);
+                    }
+                } else {
+                    changes.push(`➕ Deploy ${idx + 1}: New Added`);
+                }
+            });
+
+            if (oldCloudData && currentFilter !== oldCloudData.filter) {
+                changes.unshift(`🎯 Filter Modifié: ${currentFilter}`);
+            }
+
+            if (newData.some(d => !d.from || !d.id || !d.ips)) { alert("All fields must be filled!"); return; }
+
+            document.getElementById('loadingOverlay').style.display = 'flex';
+            const timestamp = new Date().toLocaleString();
+            
+            // Generate direct link for the specific platform
+            const directLink = `${currentUrl}?plat=${currentPlatform}`;
+
+            try {
+                await db.ref('ems4/plans/' + currentPlatform + '/current').set({ deploys: newData, filter: currentFilter, timestamp });
+                await db.ref('ems4/plans/' + currentPlatform + '/history').push({ deploys: newData, filter: currentFilter, timestamp });
+
+                let changeLog = changes.length > 0 ? changes.join('\n') : "✨ Refresh Structure";
+                
+                const finalMsg = `🚀 *EMS4 PLAN UPDATED* \n━━━━━━━━━━━━━━━\n🖥 Platform: #${currentPlatform}\n🎯 Filter: ${currentFilter}\n━━━━━━━━━━━━━━━\n\n${changeLog}\n\n🔗 *VIEW MODIFICATION:* \n${directLink}\n\n👷‍♂️ _Veuillez vérifier l'interface pour lancer._`;
+
+                await fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ chat_id: telegramChatId, text: finalMsg, parse_mode: 'Markdown' })
+                });
+
+                alert("✅ Saved! Notification sent to Group.");
+                oldCloudData = { deploys: newData, filter: currentFilter };
+            } catch (e) { alert("Error: " + e.message); }
+            document.getElementById('loadingOverlay').style.display = 'none';
+        }
+    </script>
 </body>
 </html>
