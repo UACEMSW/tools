@@ -166,14 +166,19 @@
                 if (!data) return;
                 Object.keys(data).reverse().forEach(key => {
                     const item = data[key];
+                    // Formatting multi-line summary for UI display
+                    const displaySummary = item.summary ? item.summary.replace(/\n/g, '<br>') : 'Updated';
+                    
                     list.innerHTML += `
-                        <div class="history-item p-4 flex justify-between items-center border-l-4 border-transparent">
+                        <div class="history-item p-4 flex justify-between items-start border-l-4 border-transparent">
                             <div class="flex flex-col gap-1 overflow-hidden">
                                 <div class="flex items-center gap-2">
                                     <span class="text-[10px] font-black bg-slate-100 px-2 py-0.5 rounded text-slate-800 uppercase italic">${item.filter}</span>
                                     <span class="text-[9px] text-slate-400 font-bold tracking-tight">${item.timestamp}</span>
                                 </div>
-                                <div class="text-[10px] text-red-600 font-bold truncate tracking-tight uppercase">📝 UI Updated</div>
+                                <div class="text-[10px] text-red-600 font-bold tracking-tight uppercase leading-relaxed mt-1">
+                                    ${displaySummary}
+                                </div>
                             </div>
                             <button onclick="loadHistoryToUI('${key}')" class="bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white px-3 py-2 rounded-lg text-[9px] font-black transition shrink-0 ml-4">LOAD</button>
                         </div>`;
@@ -268,8 +273,8 @@
                 }
             });
 
-            const summaryForBot = changesArray.join('');
-            if (!summaryForBot && currentFilter === oldCloudData.filter) {
+            const finalLog = changesArray.join('');
+            if (!finalLog && currentFilter === oldCloudData.filter) {
                 alert("No changes detected.");
                 return;
             }
@@ -280,11 +285,18 @@
             const timestamp = new Date().toLocaleString('en-GB', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }).replace(',', '');
 
             try {
-                const saveObj = { deploys: newData, filter: currentFilter, timestamp, summary: "UI Updated" };
+                // Storing the actual change list in the 'summary' field
+                const saveObj = { 
+                    deploys: newData, 
+                    filter: currentFilter, 
+                    timestamp, 
+                    summary: finalLog || "\n--> Refresh UI" 
+                };
+                
                 await db.ref('ems4/plans/' + currentPlatform + '/current').set(saveObj);
                 await db.ref('ems4/plans/' + currentPlatform + '/history').push(saveObj);
 
-                const botMsg = `🚀 *UPDATE [#${currentPlatform}]*\n━━━━━━━━━━━━━━━\n🎯 Filter: ${currentFilter}\n🕒 Time: ${timestamp}\n📝 Update: ${summaryForBot || '\n--> Refresh UI'}\n━━━━━━━━━━━━━━━\n🔗 ${currentUrl}?plat=${currentPlatform}`;
+                const botMsg = `🚀 *UPDATE [#${currentPlatform}]*\n━━━━━━━━━━━━━━━\n🎯 Filter: ${currentFilter}\n🕒 Time: ${timestamp}\n📝 Update: ${saveObj.summary}\n━━━━━━━━━━━━━━━\n🔗 ${currentUrl}?plat=${currentPlatform}`;
 
                 await fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, {
                     method: 'POST',
