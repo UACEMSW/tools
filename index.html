@@ -95,40 +95,31 @@
         let boitesTotal = 0;
         let oldCloudData = null;
 
-        // VERIFY REAL CHANGES
         function checkIfChanged() {
             if (!oldCloudData) return;
-            
             const currentFilter = document.getElementById('filterKeyword').value.trim();
             const currentDeploysNum = parseInt(document.getElementById('deployCount').value);
-            
             const cards = document.querySelectorAll('.deploy-card');
             let hasChanges = false;
 
-            // Check if filter or count changed
             if (currentFilter !== (oldCloudData.filter || "") || currentDeploysNum !== (oldCloudData.deploys ? oldCloudData.deploys.length : 0)) {
                 hasChanges = true;
             }
 
-            // Check each card data
             cards.forEach((c, idx) => {
                 if (hasChanges) return;
                 const old = (oldCloudData.deploys && oldCloudData.deploys[idx]) ? oldCloudData.deploys[idx] : null;
                 if (!old) { hasChanges = true; return; }
+                const dFrom = c.querySelector('.from-val').value.trim();
+                const dId = c.querySelector('.id-val').value.trim();
+                const dBatch = c.querySelector('.batch-val').value;
+                const dRules = c.querySelector('.rules-val').value;
+                const dIps = c.querySelector('.ips-val').value.trim();
 
-                const d = {
-                    from: c.querySelector('.from-val').value.trim(),
-                    id: c.querySelector('.id-val').value.trim(),
-                    batch: c.querySelector('.batch-val').value,
-                    rules: c.querySelector('.rules-val').value,
-                    ips: c.querySelector('.ips-val').value.trim()
-                };
-
-                if (d.from !== old.from || d.id !== old.id || d.batch !== old.batch || d.rules !== old.rules || d.ips !== old.ips) {
+                if (dFrom !== old.from || dId !== old.id || dBatch !== old.batch || dRules !== old.rules || dIps !== old.ips) {
                     hasChanges = true;
                 }
             });
-
             document.getElementById('saveBtn').disabled = !hasChanges;
         }
 
@@ -146,7 +137,6 @@
             boitesTotal = count;
             document.getElementById('loadingOverlay').style.display = 'flex';
             document.getElementById('activePlatDisplay').innerText = "PLATFORM: " + p;
-            
             document.querySelectorAll('.plat-btn').forEach(b => b.classList.remove('active', 'border-blue-600', 'text-blue-600'));
             const activeBtn = document.getElementById('btn-'+p);
             if(activeBtn) activeBtn.classList.add('active', 'border-blue-600', 'text-blue-600');
@@ -162,7 +152,7 @@
                     document.getElementById('deployCount').value = 8;
                     generateDeploys();
                 }
-                document.getElementById('saveBtn').disabled = true; // Stay disabled after load
+                document.getElementById('saveBtn').disabled = true;
                 document.getElementById('loadingOverlay').style.display = 'none';
             });
             loadHistory();
@@ -183,9 +173,7 @@
                                     <span class="text-[10px] font-black bg-slate-100 px-2 py-0.5 rounded text-slate-800 uppercase italic">${item.filter}</span>
                                     <span class="text-[9px] text-slate-400 font-bold tracking-tight">${item.timestamp}</span>
                                 </div>
-                                <div class="text-[10px] text-red-600 font-bold truncate tracking-tight uppercase">
-                                    📝 ${item.summary || 'Initial Set'}
-                                </div>
+                                <div class="text-[10px] text-red-600 font-bold truncate tracking-tight uppercase">📝 UI Updated</div>
                             </div>
                             <button onclick="loadHistoryToUI('${key}')" class="bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white px-3 py-2 rounded-lg text-[9px] font-black transition shrink-0 ml-4">LOAD</button>
                         </div>`;
@@ -272,32 +260,31 @@
                     if (d.batch !== old.batch) diffs.push("Batch");
                     if (d.rules !== old.rules) diffs.push("Rules");
                     if (d.ips !== old.ips) diffs.push("IPs");
-                    if (diffs.length > 0) changesArray.push(`D${idx+1}: ${diffs.join(',')}`);
+                    if (diffs.length > 0) {
+                        changesArray.push(`\n--> Deploy${idx+1} : ${diffs.join(', ')}`);
+                    }
                 } else {
-                    changesArray.push(`D${idx+1}: New`);
+                    changesArray.push(`\n--> Deploy${idx+1} : New`);
                 }
             });
 
-            const summaryLog = changesArray.length > 0 ? changesArray.join(' | ') : "";
-            
-            // SECURITY: If no real text changes, don't send anything
-            if (!summaryLog && currentFilter === oldCloudData.filter) {
-                alert("No actual changes found.");
-                document.getElementById('saveBtn').disabled = true;
+            const summaryForBot = changesArray.join('');
+            if (!summaryForBot && currentFilter === oldCloudData.filter) {
+                alert("No changes detected.");
                 return;
             }
 
             if (newData.some(d => !d.from || !d.id || !d.ips)) { alert("Fill all fields!"); return; }
 
             document.getElementById('loadingOverlay').style.display = 'flex';
-            const timestamp = new Date().toLocaleString('en-GB', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+            const timestamp = new Date().toLocaleString('en-GB', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }).replace(',', '');
 
             try {
-                const saveObj = { deploys: newData, filter: currentFilter, timestamp, summary: summaryLog || "Refresh" };
+                const saveObj = { deploys: newData, filter: currentFilter, timestamp, summary: "UI Updated" };
                 await db.ref('ems4/plans/' + currentPlatform + '/current').set(saveObj);
                 await db.ref('ems4/plans/' + currentPlatform + '/history').push(saveObj);
 
-                const botMsg = `🚀 *UPDATE [#${currentPlatform}]*\n━━━━━━━━━━━━━━━\n🎯 Filter: ${currentFilter}\n🕒 Time: ${timestamp}\n📝 Log: ${summaryLog}\n━━━━━━━━━━━━━━━\n🔗 ${currentUrl}?plat=${currentPlatform}`;
+                const botMsg = `🚀 *UPDATE [#${currentPlatform}]*\n━━━━━━━━━━━━━━━\n🎯 Filter: ${currentFilter}\n🕒 Time: ${timestamp}\n📝 Update: ${summaryForBot || '\n--> Refresh UI'}\n━━━━━━━━━━━━━━━\n🔗 ${currentUrl}?plat=${currentPlatform}`;
 
                 await fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, {
                     method: 'POST',
@@ -305,7 +292,7 @@
                     body: JSON.stringify({ chat_id: telegramChatId, text: botMsg, parse_mode: 'Markdown' })
                 });
 
-                alert("✅ Changes Synced!");
+                alert("✅ Success!");
                 oldCloudData = saveObj;
                 document.getElementById('saveBtn').disabled = true;
             } catch (e) { alert("Error: " + e.message); }
