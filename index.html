@@ -85,6 +85,7 @@
         </div>
 
         <div id="mainSection" class="hidden space-y-6">
+            <div id="platIndicator" class="text-center font-black text-blue-600 uppercase italic text-sm tracking-widest">---</div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
                     <div class="flex justify-between items-center mb-2">
@@ -201,6 +202,7 @@
             document.querySelectorAll('.plat-btn').forEach(b => b.classList.remove('active'));
             if(document.getElementById('btn-'+p)) document.getElementById('btn-'+p).classList.add('active');
             
+            document.getElementById('platIndicator').innerText = `Editing: ${p}`;
             document.getElementById('mainSection').classList.remove('hidden');
             document.getElementById('statsSection').classList.remove('hidden');
             document.getElementById('limitContainer').classList.remove('hidden');
@@ -241,21 +243,22 @@
             if (curLimit !== (oldCloudData.limit || 100)) diffs.push(`Limit: ${curLimit}`);
             if (curFilter !== (oldCloudData.filter || "")) diffs.push(`Filter: ${curFilter}`);
 
-            const curDeploys = Array.from(document.querySelectorAll('.deploy-card')).map(c => ({
+            const curDeploys = Array.from(document.querySelectorAll('.deploy-card')).map((c, idx) => ({
+                idx: idx + 1,
                 from: c.querySelector('.from-val').value, 
                 id: c.querySelector('.id-val').value,
+                batch: c.querySelector('.batch-val').value,
+                rules: c.querySelector('.rules-val').value,
                 ips: c.querySelector('.ips-val').value
             }));
 
-            // Check if any deploy data changed (especially IPs)
             const oldDeploys = oldCloudData.deploys || [];
-            let deployChanged = false;
             curDeploys.forEach((d, i) => {
-                if(!oldDeploys[i] || d.from !== oldDeploys[i].from || d.id !== oldDeploys[i].id || d.ips !== oldDeploys[i].ips) {
-                    deployChanged = true;
+                const old = oldDeploys[i] || {};
+                if(d.from !== old.from || d.id !== old.id || d.ips !== old.ips || d.batch !== old.batch || d.rules !== old.rules) {
+                    diffs.push(`Deploy ${d.idx}: Updated`);
                 }
             });
-            if(deployChanged) diffs.push(`Deploys/IPs updated`);
 
             const curActions = Array.from(document.querySelectorAll('.action-chip')).map(el => ({
                 n: el.querySelector('label').innerText, 
@@ -293,14 +296,8 @@
             document.getElementById('loadingOverlay').style.display = 'flex';
             await db.ref(`ems4/plans/${currentPlatform}/current`).set(saveObj);
 
-            // Detailed Telegram Message
-            const stats = oldCloudData.stats || {};
+            // Telegram Message (Cleaned up as per request)
             const telegramMsg = `🚀 <b>MODIF: ${currentPlatform}</b>\n` +
-                                `━━━━━━━━━━━━━━━\n` +
-                                `📊 <b>STATUS:</b>\n` +
-                                `• SEEDS: ${stats.seeds || 0}\n` +
-                                `• RDPs: ${stats.rdps || 0}\n` +
-                                `• SESSIONS: ${stats.sessions || 0}\n` +
                                 `━━━━━━━━━━━━━━━\n` +
                                 `📝 <b>CHANGES:</b>\n` +
                                 `${diffs.map(d => '• ' + d).join('\n')}\n` +
