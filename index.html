@@ -11,13 +11,7 @@
         .plat-btn.active { border-color: #2563eb; background-color: #eff6ff; color: #2563eb; ring: 4px; ring-color: #eff6ff; }
         #loadingOverlay, #loginOverlay { background: rgba(255,255,255,0.95); position: fixed; inset: 0; z-index: 200; align-items: center; justify-content: center; display: flex; }
         #loadingOverlay { display: none; z-index: 210; }
-        
-        /* Viewer Mode Restrictions */
-        .viewer-mode .admin-only, 
-        .viewer-mode .super-only, 
-        .viewer-mode #statsSection, 
-        .viewer-mode .platform-selector { display: none !important; }
-        
+        .viewer-mode .admin-only, .viewer-mode .super-only, .viewer-mode .platform-selector { display: none !important; }
         #saveBtn:disabled, #updateStatsBtn:disabled { background-color: #cbd5e1; cursor: not-allowed; opacity: 0.7; }
         .readonly-stat { pointer-events: none !important; background-color: transparent; }
         .viewer-mode input, .viewer-mode select, .viewer-mode textarea { pointer-events: none !important; background-color: #f8fafc; border:none; }
@@ -81,7 +75,7 @@
                     </div>
                 </div>
             </div>
-            <button id="updateStatsBtn" disabled onclick="saveStatsOnly()" class="hidden mt-2 w-full bg-slate-800 text-white py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition">Update Stats Only (No Notify)</button>
+            <button id="updateStatsBtn" disabled onclick="saveStatsOnly()" class="super-only mt-2 w-full bg-slate-800 text-white py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition">Update Stats (No Notify)</button>
         </div>
 
         <div class="platform-selector grid grid-cols-3 gap-4 mb-6">
@@ -193,7 +187,7 @@
             
             if(userRole === 'super') {
                 label.innerText = "ROLE: SUPER ADMIN"; badge.innerText = "SUPER"; badge.className = "bg-purple-600 text-white px-2 py-0.5 rounded text-[8px] font-black";
-                document.getElementById('updateStatsBtn').classList.remove('hidden');
+                document.querySelectorAll('.super-only').forEach(el => el.classList.remove('hidden'));
             } else {
                 label.innerText = userRole === 'admin' ? "ROLE: ADMIN" : "ROLE: VIEWER"; 
                 badge.innerText = userRole.toUpperCase(); badge.className = "bg-slate-600 text-white px-2 py-0.5 rounded text-[8px] font-black";
@@ -247,6 +241,22 @@
             if (curLimit !== (oldCloudData.limit || 100)) diffs.push(`Limit: ${curLimit}`);
             if (curFilter !== (oldCloudData.filter || "")) diffs.push(`Filter: ${curFilter}`);
 
+            const curDeploys = Array.from(document.querySelectorAll('.deploy-card')).map(c => ({
+                from: c.querySelector('.from-val').value, 
+                id: c.querySelector('.id-val').value,
+                ips: c.querySelector('.ips-val').value
+            }));
+
+            // Check if any deploy data changed (especially IPs)
+            const oldDeploys = oldCloudData.deploys || [];
+            let deployChanged = false;
+            curDeploys.forEach((d, i) => {
+                if(!oldDeploys[i] || d.from !== oldDeploys[i].from || d.id !== oldDeploys[i].id || d.ips !== oldDeploys[i].ips) {
+                    deployChanged = true;
+                }
+            });
+            if(deployChanged) diffs.push(`Deploys/IPs updated`);
+
             const curActions = Array.from(document.querySelectorAll('.action-chip')).map(el => ({
                 n: el.querySelector('label').innerText, 
                 v: parseInt(el.querySelector('input').value) || 0,
@@ -258,11 +268,6 @@
                 const oldA = oldActions.find(o => o.name === newA.n && o.type === newA.t);
                 if(!oldA) diffs.push(`[${newA.t}] Added ${newA.n}: ${newA.v}`);
                 else if (oldA.value !== newA.v) diffs.push(`[${newA.t}] ${newA.n}: ${oldA.value} ➜ ${newA.v}`);
-            });
-            
-            // Detect Deleted
-            oldActions.forEach(oldA => {
-                if(!curActions.find(c => c.n === oldA.name && c.t === oldA.type)) diffs.push(`[${oldA.type}] Removed ${oldA.name}`);
             });
 
             return diffs;
@@ -288,11 +293,19 @@
             document.getElementById('loadingOverlay').style.display = 'flex';
             await db.ref(`ems4/plans/${currentPlatform}/current`).set(saveObj);
 
+            // Detailed Telegram Message
+            const stats = oldCloudData.stats || {};
             const telegramMsg = `🚀 <b>MODIF: ${currentPlatform}</b>\n` +
                                 `━━━━━━━━━━━━━━━\n` +
+                                `📊 <b>STATUS:</b>\n` +
+                                `• SEEDS: ${stats.seeds || 0}\n` +
+                                `• RDPs: ${stats.rdps || 0}\n` +
+                                `• SESSIONS: ${stats.sessions || 0}\n` +
+                                `━━━━━━━━━━━━━━━\n` +
+                                `📝 <b>CHANGES:</b>\n` +
                                 `${diffs.map(d => '• ' + d).join('\n')}\n` +
                                 `━━━━━━━━━━━━━━━\n` +
-                                `🔗 <a href="${netlifyBase}/?mode=view&plat=${currentPlatform}">VIEW PLAN ONLY</a>`;
+                                `🔗 <a href="${netlifyBase}/?mode=view&plat=${currentPlatform}">VIEW PLAN</a>`;
 
             await fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -302,7 +315,6 @@
             location.reload();
         }
 
-        // Stats Logic
         function checkStatsChange() {
             if (!oldCloudData || userRole !== 'super') return;
             const s = oldCloudData.stats || {};
@@ -327,9 +339,16 @@
             oldCloudData.stats = stats;
             document.getElementById('updateStatsBtn').disabled = true;
             document.getElementById('loadingOverlay').style.display = 'none';
+            alert("Stats Updated!");
         }
 
-        function compareData() { if (oldCloudData) document.getElementById('saveBtn').disabled = (getChanges().length === 0); }
+        function compareData() { 
+            if (oldCloudData) {
+                const diffs = getChanges();
+                document.getElementById('saveBtn').disabled = (diffs.length === 0);
+            }
+        }
+
         function changePlat(p) { selectPlatform(p); }
         
         function generateDeploys(savedData = null) {
@@ -362,7 +381,7 @@
                                 <option ${d.rules == '2 ips RANDOM ON SERVER SELECTED' ? 'selected' : ''}>2 ips RANDOM ON SERVER SELECTED</option>
                             </select>
                         </div>
-                        <textarea oninput="compareData()" class="ips-val w-full p-2 border rounded text-[10px] font-mono bg-slate-50" rows="1">${d.ips}</textarea>
+                        <textarea oninput="compareData()" class="ips-val w-full p-2 border rounded text-[10px] font-mono bg-slate-50" rows="1" placeholder="Paste IPs here...">${d.ips || ''}</textarea>
                     </div>`;
             }
         }
