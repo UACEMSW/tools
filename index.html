@@ -12,12 +12,10 @@
         #loadingOverlay, #loginOverlay { background: rgba(255,255,255,0.95); position: fixed; inset: 0; z-index: 200; align-items: center; justify-content: center; display: flex; }
         #loadingOverlay { display: none; z-index: 210; }
         
-        /* Hiding specific sections for viewer mode */
-        .viewer-mode .admin-only, 
-        .viewer-mode .super-only, 
-        .viewer-mode .platform-selector, 
-        .viewer-mode #statsSection { display: none !important; }
-        
+        /* Roles Visibility */
+        .viewer-mode .admin-only, .viewer-mode .super-only, .viewer-mode .platform-selector, .viewer-mode #statsSection { display: none !important; }
+        .admin-mode .super-only { display: none !important; } /* Admin75 cannot see Super elements */
+
         #saveBtn:disabled, #updateStatsBtn:disabled { background-color: #cbd5e1; cursor: not-allowed; opacity: 0.7; }
         .readonly-stat { pointer-events: none !important; background-color: transparent; }
         .viewer-mode input, .viewer-mode select, .viewer-mode textarea { pointer-events: none !important; background-color: #f8fafc; border:none; }
@@ -81,7 +79,9 @@
                     </div>
                 </div>
             </div>
-            <button id="updateStatsBtn" disabled onclick="saveStatsOnly()" class="super-only mt-2 w-full bg-slate-800 text-white py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition">Update Stats (No Notify)</button>
+            <button id="updateStatsBtn" style="display: none;" onclick="saveStatsOnly()" class="super-only mt-2 w-full bg-slate-800 text-white py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition">
+                Update Stats (No Notify)
+            </button>
         </div>
 
         <div class="platform-selector grid grid-cols-3 gap-4 mb-6">
@@ -172,16 +172,25 @@
                 startApp();
                 if(urlParams.get('plat')) selectPlatform(urlParams.get('plat'));
             } else if (savedKey === SUPER_KEY) {
-                userRole = "super"; startApp();
+                userRole = "super"; 
+                startApp();
             } else if (savedKey === ADMIN_KEY) {
-                userRole = "admin"; startApp();
-            } else { document.getElementById('loginOverlay').style.display = 'flex'; }
+                userRole = "admin"; 
+                document.body.classList.add('admin-mode');
+                startApp();
+            } else { 
+                document.getElementById('loginOverlay').style.display = 'flex'; 
+            }
         };
 
         function checkAccess() {
             const input = document.getElementById('accessKey').value;
-            if (input === SUPER_KEY || input === ADMIN_KEY) { localStorage.setItem('ems4_key', input); location.reload(); }
-            else { alert("Access Denied!"); }
+            if (input === SUPER_KEY || input === ADMIN_KEY) { 
+                localStorage.setItem('ems4_key', input); 
+                location.reload(); 
+            } else { 
+                alert("Access Denied!"); 
+            }
         }
 
         function logout() { localStorage.removeItem('ems4_key'); location.reload(); }
@@ -191,14 +200,24 @@
             document.getElementById('appContent').classList.remove('hidden');
             const badge = document.getElementById('roleBadge');
             const label = document.getElementById('roleLabel');
+            const updateBtn = document.getElementById('updateStatsBtn');
             
             if(userRole === 'super') {
-                label.innerText = "ROLE: SUPER ADMIN"; badge.innerText = "SUPER"; badge.className = "bg-purple-600 text-white px-2 py-0.5 rounded text-[8px] font-black";
-                document.querySelectorAll('.super-only').forEach(el => el.classList.remove('hidden'));
-            } else {
-                label.innerText = userRole === 'admin' ? "ROLE: ADMIN" : "ROLE: VIEWER"; 
-                badge.innerText = userRole.toUpperCase(); badge.className = "bg-slate-600 text-white px-2 py-0.5 rounded text-[8px] font-black";
+                label.innerText = "ROLE: SUPER ADMIN"; 
+                badge.innerText = "SUPER"; 
+                badge.className = "bg-purple-600 text-white px-2 py-0.5 rounded text-[8px] font-black";
+                updateBtn.style.display = 'block'; // Show only for Super
+            } else if (userRole === 'admin') {
+                label.innerText = "ROLE: ADMIN"; 
+                badge.innerText = "ADMIN"; 
+                badge.className = "bg-slate-600 text-white px-2 py-0.5 rounded text-[8px] font-black";
                 document.querySelectorAll('.stat-input').forEach(el => { el.readOnly = true; el.classList.add('readonly-stat'); });
+                updateBtn.style.display = 'none'; // Explicitly hide for Admin
+            } else {
+                label.innerText = "ROLE: VIEWER"; 
+                badge.innerText = "VIEWER"; 
+                badge.className = "bg-slate-600 text-white px-2 py-0.5 rounded text-[8px] font-black";
+                updateBtn.style.display = 'none';
             }
         }
 
@@ -211,12 +230,11 @@
             document.getElementById('platIndicator').innerText = `Editing: ${p}`;
             document.getElementById('mainSection').classList.remove('hidden');
             
-            // Logic to show/hide Stats Section based on role
             const statsSec = document.getElementById('statsSection');
             if (userRole === 'viewer') {
-                statsSec.classList.add('hidden'); // Ensure it's hidden for viewers
+                statsSec.classList.add('hidden');
             } else {
-                statsSec.classList.remove('hidden'); // Show for Admin/Super
+                statsSec.classList.remove('hidden');
             }
             
             document.getElementById('limitContainer').classList.remove('hidden');
@@ -249,6 +267,7 @@
 
         function getChanges() {
             let diffs = [];
+            if(!oldCloudData) return diffs;
             const curLimit = parseInt(document.getElementById('globalLimit').value);
             const curFilter = document.getElementById('filterKeyword').value;
             const curProd = document.getElementById('prodType').value;
@@ -270,10 +289,10 @@
             curDeploys.forEach((d, i) => {
                 const old = oldDeploys[i] || {};
                 let dChanges = [];
-                if (d.ips !== old.ips) dChanges.push("ips updated");
-                if (d.batch !== old.batch) dChanges.push(`batch: ${d.batch}`);
-                if (d.rules !== old.rules) dChanges.push(`rules: ${d.rules}`);
-                if (d.from !== old.from || d.id !== old.id) dChanges.push("IDs updated");
+                if (d.ips !== (old.ips || "")) dChanges.push("ips updated");
+                if (d.batch !== (old.batch || "10/3000P")) dChanges.push(`batch: ${d.batch}`);
+                if (d.rules !== (old.rules || "SELECT ALL IPS")) dChanges.push(`rules: ${d.rules}`);
+                if (d.from !== (old.from || "") || d.id !== (old.id || "")) dChanges.push("IDs updated");
                 
                 if (dChanges.length > 0) {
                     diffs.push(`Deploy ${d.idx}: ${dChanges.join(' | ')}`);
@@ -343,6 +362,7 @@
         }
 
         async function saveStatsOnly() {
+            if(userRole !== 'super') return;
             const stats = {
                 seeds: document.getElementById('statTotalSeeds').value,
                 rdps: document.getElementById('statRDPs').value,
@@ -355,11 +375,11 @@
             oldCloudData.stats = stats;
             document.getElementById('updateStatsBtn').disabled = true;
             document.getElementById('loadingOverlay').style.display = 'none';
-            alert("Stats Updated!");
+            alert("Stats Updated Successfully!");
         }
 
         function compareData() { 
-            if (oldCloudData) {
+            if (oldCloudData && userRole !== 'viewer') {
                 const diffs = getChanges();
                 document.getElementById('saveBtn').disabled = (diffs.length === 0);
             }
@@ -381,8 +401,8 @@
                     <div class="deploy-card bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
                         <div class="text-[10px] font-black mb-2 uppercase text-slate-400">Deploy ${i+1}</div>
                         <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2">
-                            <input type="text" oninput="compareData()" class="from-val p-2 border rounded text-xs" value="${d.from}" placeholder="FROM">
-                            <input type="text" oninput="compareData()" class="id-val p-2 border rounded text-xs font-black text-blue-600" value="${d.id}" placeholder="ID">
+                            <input type="text" oninput="compareData()" class="from-val p-2 border rounded text-xs" value="${d.from || ''}" placeholder="FROM">
+                            <input type="text" oninput="compareData()" class="id-val p-2 border rounded text-xs font-black text-blue-600" value="${d.id || ''}" placeholder="ID">
                             <select onchange="compareData()" class="batch-val p-2 border rounded text-xs">
                                 <option ${d.batch == '0/0 Parallel' ? 'selected' : ''}>0/0 Parallel</option>
                                 <option ${d.batch == '3/3000P' ? 'selected' : ''}>3/3000P</option>
@@ -390,7 +410,7 @@
                                 <option ${d.batch == '10/3000P' ? 'selected' : ''}>10/3000P</option>
                             </select>
                             <select onchange="compareData()" class="rules-val p-2 border rounded text-xs">
-                                <option>SELECT ALL IPS</option>
+                                <option ${d.rules == 'SELECT ALL IPS' ? 'selected' : ''}>SELECT ALL IPS</option>
                                 <option ${d.rules == 'SELECT 30 IPS MAX' ? 'selected' : ''}>SELECT 30 IPS MAX</option>
                                 <option ${d.rules == 'RANDOM ON SELECTED' ? 'selected' : ''}>RANDOM ON SELECTED</option>
                                 <option ${d.rules == 'RANDOM ON SERVER SELECTED' ? 'selected' : ''}>RANDOM ON SERVER SELECTED</option>
