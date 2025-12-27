@@ -13,7 +13,10 @@
         #loadingOverlay { display: none; z-index: 210; }
         .viewer-mode .admin-only, .viewer-mode .super-only { display: none !important; }
         #saveBtn:disabled, #updateStatsBtn:disabled { background-color: #cbd5e1; cursor: not-allowed; opacity: 0.7; }
-        .viewer-mode input, .viewer-mode select, .viewer-mode textarea { pointer-events: none !important; background-color: #f8fafc; }
+        .viewer-mode input:not(.prod-input), .viewer-mode select, .viewer-mode textarea { pointer-events: none !important; background-color: #f8fafc; }
+        .viewer-mode .prod-input { pointer-events: none !important; }
+        /* Style for Rotation group */
+        .stat-card { background: white; padding: 0.75rem; border-radius: 1rem; border: 1px solid #e2e8f0; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
     </style>
 </head>
 <body class="bg-slate-100 p-4 md:p-8 font-sans text-slate-900">
@@ -29,9 +32,16 @@
     <div id="loadingOverlay"><div class="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-600"></div></div>
 
     <div id="appContent" class="hidden max-w-5xl mx-auto">
-        <header class="bg-white p-6 rounded-2xl shadow-sm border-b-4 border-blue-600 mb-4 flex justify-between items-center">
-            <h1 class="text-2xl font-black italic uppercase tracking-tighter">EMS4 PLAN</h1>
-            <div class="flex gap-4 items-center">
+        <header class="bg-white p-6 rounded-2xl shadow-sm border-b-4 border-blue-600 mb-4 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3 w-full md:w-auto">
+                <h1 class="text-2xl font-black italic uppercase tracking-tighter whitespace-nowrap">EMS4 PLAN</h1>
+                <div id="prodContainer" class="hidden flex items-center bg-yellow-100 border border-yellow-200 px-3 py-1 rounded-lg">
+                    <span class="text-[10px] font-black text-yellow-600 mr-2">PROD:</span>
+                    <input type="text" id="prodType" oninput="compareData()" class="prod-input bg-transparent border-none outline-none font-black text-xs text-yellow-800 w-32 uppercase placeholder-yellow-400" placeholder="TYPE...">
+                </div>
+            </div>
+
+            <div class="flex gap-4 items-center justify-end w-full md:w-auto">
                 <div id="limitContainer" class="hidden bg-blue-50 px-4 py-2 rounded-xl border border-blue-100">
                     <label class="block text-[8px] font-black text-blue-400 uppercase tracking-widest text-center">Seeds/Hr</label>
                     <input type="number" id="globalLimit" oninput="compareData()" class="w-16 bg-transparent font-black text-blue-700 outline-none text-lg text-center" value="100">
@@ -45,18 +55,26 @@
         </header>
 
         <div id="statsSection" class="hidden mb-6">
-            <div class="grid grid-cols-3 gap-3">
-                <div class="bg-white p-3 rounded-2xl shadow-sm border border-slate-200">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div class="stat-card">
                     <label class="block text-[9px] font-black text-slate-400 uppercase">Total Seeds</label>
                     <input type="text" id="statTotalSeeds" oninput="checkStatsChange()" class="w-full bg-transparent font-black text-blue-600 text-lg outline-none" value="0">
                 </div>
-                <div class="bg-white p-3 rounded-2xl shadow-sm border border-slate-200">
+                <div class="stat-card">
                     <label class="block text-[9px] font-black text-slate-400 uppercase">RDPs</label>
                     <input type="text" id="statRDPs" oninput="checkStatsChange()" class="w-full bg-transparent font-black text-slate-700 text-lg outline-none" value="0">
                 </div>
-                <div class="bg-white p-3 rounded-2xl shadow-sm border border-slate-200">
+                <div class="stat-card">
                     <label class="block text-[9px] font-black text-slate-400 uppercase">Sessions</label>
                     <input type="text" id="statSessions" oninput="checkStatsChange()" class="w-full bg-transparent font-black text-slate-700 text-lg outline-none" value="0">
+                </div>
+                <div class="stat-card border-purple-200 bg-purple-50/30">
+                    <label class="block text-[9px] font-black text-purple-400 uppercase text-center mb-1">Rotation (Min ➜ Max)</label>
+                    <div class="flex items-center justify-center gap-1">
+                        <input type="number" id="rotMin" oninput="checkStatsChange()" class="w-12 bg-transparent font-black text-purple-700 text-center outline-none" placeholder="0">
+                        <span class="text-purple-300 font-bold">-</span>
+                        <input type="number" id="rotMax" oninput="checkStatsChange()" class="w-12 bg-transparent font-black text-purple-700 text-center outline-none" placeholder="0">
+                    </div>
                 </div>
             </div>
             <button id="updateStatsBtn" disabled onclick="saveStatsOnly()" class="hidden mt-2 w-full bg-slate-800 text-white py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition">Update Stats Only (No Notify)</button>
@@ -168,9 +186,12 @@
             if(userRole === 'super') {
                 label.innerText = "ROLE: SUPER ADMIN"; badge.innerText = "SUPER"; badge.className = "bg-purple-600 text-white px-2 py-0.5 rounded text-[8px] font-black";
                 document.getElementById('updateStatsBtn').classList.remove('hidden');
-            } else if(userRole === 'admin') {
-                label.innerText = "ROLE: ADMIN"; badge.innerText = "ADMIN"; badge.className = "bg-red-600 text-white px-2 py-0.5 rounded text-[8px] font-black";
-                document.getElementById('statTotalSeeds').readOnly = true; document.getElementById('statRDPs').readOnly = true; document.getElementById('statSessions').readOnly = true;
+            } else {
+                // ADMIN OR VIEWER: Lock Stats
+                label.innerText = userRole === 'admin' ? "ROLE: ADMIN" : "ROLE: VIEWER"; 
+                badge.innerText = userRole.toUpperCase(); badge.className = "bg-slate-600 text-white px-2 py-0.5 rounded text-[8px] font-black";
+                const fields = ['statTotalSeeds', 'statRDPs', 'statSessions', 'rotMin', 'rotMax'];
+                fields.forEach(f => { document.getElementById(f).readOnly = true; document.getElementById(f).classList.add('pointer-events-none'); });
             }
         }
 
@@ -183,13 +204,17 @@
             document.getElementById('mainSection').classList.remove('hidden');
             document.getElementById('statsSection').classList.remove('hidden');
             document.getElementById('limitContainer').classList.remove('hidden');
+            document.getElementById('prodContainer').classList.remove('hidden');
 
             const snap = await db.ref(`ems4/plans/${p}/current`).once('value');
-            oldCloudData = snap.val() || { limit: 100, filter: "", deploys: [], actions_list: [], stats: {seeds: '0', rdps: '0', sessions: '0'} };
+            oldCloudData = snap.val() || { limit: 100, prodType: "", filter: "", deploys: [], actions_list: [], stats: {seeds: '0', rdps: '0', sessions: '0', rotMin: '0', rotMax: '0'} };
 
+            document.getElementById('prodType').value = oldCloudData.prodType || "";
             document.getElementById('statTotalSeeds').value = oldCloudData.stats?.seeds || '0';
             document.getElementById('statRDPs').value = oldCloudData.stats?.rdps || '0';
             document.getElementById('statSessions').value = oldCloudData.stats?.sessions || '0';
+            document.getElementById('rotMin').value = oldCloudData.stats?.rotMin || '0';
+            document.getElementById('rotMax').value = oldCloudData.stats?.rotMax || '0';
 
             document.getElementById('spam-actions-container').innerHTML = '';
             document.getElementById('inbox-actions-container').innerHTML = '';
@@ -206,39 +231,56 @@
             document.getElementById('loadingOverlay').style.display = 'none';
         }
 
-        // --- NEW: Granular Changes Detection ---
+        function checkStatsChange() {
+            if (!oldCloudData || userRole !== 'super') return;
+            const s = oldCloudData.stats || {};
+            const changed = document.getElementById('statTotalSeeds').value !== (s.seeds || '0') ||
+                            document.getElementById('statRDPs').value !== (s.rdps || '0') ||
+                            document.getElementById('statSessions').value !== (s.sessions || '0') ||
+                            document.getElementById('rotMin').value !== (s.rotMin || '0') ||
+                            document.getElementById('rotMax').value !== (s.rotMax || '0');
+            document.getElementById('updateStatsBtn').disabled = !changed;
+        }
+
+        async function saveStatsOnly() {
+            const stats = {
+                seeds: document.getElementById('statTotalSeeds').value,
+                rdps: document.getElementById('statRDPs').value,
+                sessions: document.getElementById('statSessions').value,
+                rotMin: document.getElementById('rotMin').value,
+                rotMax: document.getElementById('rotMax').value
+            };
+            document.getElementById('loadingOverlay').style.display = 'flex';
+            await db.ref(`ems4/plans/${currentPlatform}/current/stats`).set(stats);
+            oldCloudData.stats = stats;
+            document.getElementById('updateStatsBtn').disabled = true;
+            document.getElementById('loadingOverlay').style.display = 'none';
+        }
+
+        // --- Rest of functions from previous version ---
         function getChanges() {
             let diffs = [];
             const curLimit = parseInt(document.getElementById('globalLimit').value);
             const curFilter = document.getElementById('filterKeyword').value;
-            
+            const curProd = document.getElementById('prodType').value;
+            if (curProd !== (oldCloudData.prodType || "")) diffs.push(`PROD: ${oldCloudData.prodType || 'None'} ➝ ${curProd}`);
             if (curLimit !== (oldCloudData.limit || 100)) diffs.push(`Limit: ${oldCloudData.limit || 100} ➝ ${curLimit}`);
             if (curFilter !== (oldCloudData.filter || "")) diffs.push(`Filter: ${curFilter || 'None'}`);
 
-            // 1. Check Actions Individually
             const curActions = Array.from(document.querySelectorAll('.action-chip')).map(el => ({
-                n: el.querySelector('label').innerText,
-                v: parseInt(el.querySelector('input').value) || 0,
+                n: el.querySelector('label').innerText, v: parseInt(el.querySelector('input').value) || 0,
                 t: el.closest('#spam-actions-container') ? 'SPAM' : 'INBOX'
             }));
             const oldActions = oldCloudData.actions_list || [];
-
             curActions.forEach(newA => {
                 const oldA = oldActions.find(o => o.name === newA.n && o.type === newA.t);
-                if(!oldA) {
-                    diffs.push(`Action ${newA.n}: Added`);
-                } else if (oldA.value !== newA.v) {
-                    diffs.push(`Action ${newA.n}: ${oldA.value} ➝ ${newA.v}`);
-                }
+                if(!oldA) diffs.push(`Action ${newA.n}: Added`);
+                else if (oldA.value !== newA.v) diffs.push(`Action ${newA.n}: ${oldA.value} ➝ ${newA.v}`);
             });
-            
             oldActions.forEach(oldA => {
-                if(!curActions.find(n => n.n === oldA.name && n.t === oldA.type)) {
-                    diffs.push(`Action ${oldA.name}: Removed`);
-                }
+                if(!curActions.find(n => n.n === oldA.name && n.t === oldA.type)) diffs.push(`Action ${oldA.name}: Removed`);
             });
 
-            // 2. Check Deploys Individually (ID, Batch, Rules, IPs)
             const deployCards = document.querySelectorAll('.deploy-card');
             deployCards.forEach((c, i) => {
                 const oldD = oldCloudData.deploys?.[i] || {};
@@ -247,20 +289,13 @@
                 const ips = c.querySelector('.ips-val').value.trim();
                 const batch = c.querySelector('.batch-val').value;
                 const rules = c.querySelector('.rules-val').value;
-
                 if (id !== (oldD.id || "")) diffs.push(`Deploy ${i+1} ID: ${oldD.id || '?'} ➝ ${id}`);
                 if (from !== (oldD.from || "")) diffs.push(`Deploy ${i+1} From: ${oldD.from || '?'} ➝ ${from}`);
                 if (batch !== (oldD.batch || "10/3000P")) diffs.push(`Deploy ${i+1} Batch: ${oldD.batch} ➝ ${batch}`);
-                // ** THIS WAS MISSING **
                 if (rules !== (oldD.rules || "SELECT ALL IPS")) diffs.push(`Deploy ${i+1} Rules: ${oldD.rules || 'ALL'} ➝ ${rules}`);
-                
                 if (ips !== (oldD.ips || "")) diffs.push(`Deploy ${i+1}: IPs Updated`);
             });
-            
-            if(deployCards.length !== (oldCloudData.deploys?.length || 0)) {
-                 diffs.push(`Deploys Count: ${oldCloudData.deploys?.length} ➝ ${deployCards.length}`);
-            }
-
+            if(deployCards.length !== (oldCloudData.deploys?.length || 0)) diffs.push(`Deploys Count: ${oldCloudData.deploys?.length} ➝ ${deployCards.length}`);
             return diffs;
         }
 
@@ -270,64 +305,34 @@
             document.getElementById('saveBtn').disabled = (changes.length === 0);
         }
 
-        function checkStatsChange() {
-            if (!oldCloudData) return;
-            const s = oldCloudData.stats || {seeds:'0', rdps:'0', sessions:'0'};
-            const changed = document.getElementById('statTotalSeeds').value !== s.seeds ||
-                            document.getElementById('statRDPs').value !== s.rdps ||
-                            document.getElementById('statSessions').value !== s.sessions;
-            document.getElementById('updateStatsBtn').disabled = !changed;
-        }
-
-        async function saveStatsOnly() {
-            const stats = {
-                seeds: document.getElementById('statTotalSeeds').value,
-                rdps: document.getElementById('statRDPs').value,
-                sessions: document.getElementById('statSessions').value
-            };
-            document.getElementById('loadingOverlay').style.display = 'flex';
-            await db.ref(`ems4/plans/${currentPlatform}/current/stats`).set(stats);
-            oldCloudData.stats = stats;
-            document.getElementById('updateStatsBtn').disabled = true;
-            document.getElementById('loadingOverlay').style.display = 'none';
-        }
-
         async function processSave() {
-            const diffs = getChanges();
-            if(diffs.length === 0) return;
-
+            const diffs = getChanges(); if(diffs.length === 0) return;
             const limit = parseInt(document.getElementById('globalLimit').value);
             const filter = document.getElementById('filterKeyword').value;
+            const prodType = document.getElementById('prodType').value;
             const actions = Array.from(document.querySelectorAll('.action-chip')).map(el => ({ 
                 type: el.closest('#spam-actions-container') ? 'SPAM' : 'INBOX',
-                name: el.querySelector('label').innerText,
-                value: parseInt(el.querySelector('input').value) || 0
+                name: el.querySelector('label').innerText, value: parseInt(el.querySelector('input').value) || 0
             }));
             const deploys = Array.from(document.querySelectorAll('.deploy-card')).map(c => ({
                 from: c.querySelector('.from-val').value, id: c.querySelector('.id-val').value,
                 batch: c.querySelector('.batch-val').value, rules: c.querySelector('.rules-val').value, ips: c.querySelector('.ips-val').value
             }));
 
-            const saveObj = { ...oldCloudData, deploys, filter, limit, actions_list: actions, timestamp: new Date().toLocaleString() };
-
+            const saveObj = { ...oldCloudData, deploys, filter, limit, prodType, actions_list: actions, timestamp: new Date().toLocaleString() };
             document.getElementById('loadingOverlay').style.display = 'flex';
             await db.ref(`ems4/plans/${currentPlatform}/current`).set(saveObj);
-
             const telegramMsg = `🚀 <b>MODIFICATION [#${currentPlatform}]</b>\n` +
                                 `━━━━━━━━━━━━━━━\n` +
                                 `📝 <b>Changes:</b>\n${diffs.map(d => '• ' + d).join('\n')}\n` +
                                 `━━━━━━━━━━━━━━━\n🔗 <a href="${netlifyBase}/?mode=view&plat=${currentPlatform}">VIEW PLAN</a>`;
-
             await fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ chat_id: telegramChatId, text: telegramMsg, parse_mode: 'HTML' })
             });
-
             location.reload();
         }
 
-        // --- UI Helpers ---
         function generateDeploys(savedData = null) {
             const num = parseInt(document.getElementById('deployCount').value) || 0;
             const container = document.getElementById('deploysContainer');
@@ -392,8 +397,7 @@
             opts.forEach(o => {
                 const b = document.createElement('button');
                 b.className = "p-3 text-left hover:bg-slate-100 uppercase text-[10px] font-bold";
-                b.innerText = o;
-                b.onclick = () => { addActionUI(type, o, 0); closeModal(); compareData(); };
+                b.innerText = o; b.onclick = () => { addActionUI(type, o, 0); closeModal(); compareData(); };
                 list.appendChild(b);
             });
             document.getElementById('actionModal').classList.remove('hidden');
