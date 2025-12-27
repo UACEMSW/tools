@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>EMS4 | View Mode</title>
+    <title>EMS4 | Admin Control</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
@@ -11,14 +11,10 @@
         .plat-btn.active { border-color: #2563eb; background-color: #eff6ff; color: #2563eb; ring: 4px; ring-color: #eff6ff; }
         #loadingOverlay, #loginOverlay { background: rgba(255,255,255,0.95); position: fixed; inset: 0; z-index: 200; align-items: center; justify-content: center; display: flex; }
         #loadingOverlay { display: none; z-index: 210; }
-        .action-chip { animation: fadeIn 0.2s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-        
-        /* Viewer Protection */
         .viewer-mode .admin-only { display: none !important; }
-        .viewer-mode .platform-selector { display: none !important; } /* Hidden for viewers */
+        .viewer-mode .platform-selector { display: none !important; }
         .viewer-mode input, .viewer-mode select, .viewer-mode textarea { pointer-events: none !important; background-color: #f8fafc; border-color: #e2e8f0; }
+        .log-item { border-left: 3px solid #3b82f6; font-family: monospace; }
     </style>
 </head>
 <body class="bg-slate-100 p-4 md:p-8 font-sans text-slate-900">
@@ -26,18 +22,12 @@
     <div id="loginOverlay" style="display: none;">
         <div class="bg-white p-8 rounded-3xl shadow-2xl border border-slate-200 w-full max-w-sm text-center">
             <h2 class="text-2xl font-black italic mb-6 uppercase tracking-tighter text-blue-600">ADMIN ACCESS</h2>
-            <input type="password" id="accessKey" placeholder="Enter Admin Key..." class="w-full p-4 border-2 rounded-2xl mb-4 text-center font-bold outline-none focus:border-blue-500">
-            <button onclick="checkAccess()" class="w-full bg-blue-600 text-white p-4 rounded-2xl font-black uppercase hover:bg-blue-700 transition">Login as Admin</button>
-            <p id="loginError" class="text-red-500 text-xs font-bold mt-4 hidden uppercase">Invalid Admin Key</p>
+            <input type="password" id="accessKey" placeholder="Enter Admin Key..." class="w-full p-4 border-2 rounded-2xl mb-4 text-center font-bold outline-none">
+            <button onclick="checkAccess()" class="w-full bg-blue-600 text-white p-4 rounded-2xl font-black uppercase hover:bg-blue-700 transition">Login</button>
         </div>
     </div>
     
-    <div id="loadingOverlay">
-        <div class="flex flex-col items-center">
-            <div class="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
-            <div class="font-black text-blue-600 uppercase tracking-widest text-xs">Syncing Cloud...</div>
-        </div>
-    </div>
+    <div id="loadingOverlay"><div class="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-600"></div></div>
 
     <div id="appContent" class="hidden max-w-5xl mx-auto">
         <header class="bg-white p-6 rounded-2xl shadow-sm border-b-4 border-blue-600 mb-6 flex justify-between items-center">
@@ -47,29 +37,24 @@
                     <label class="block text-[8px] font-black text-blue-400 uppercase">Seeds Per Hour</label>
                     <input type="number" id="globalLimit" oninput="updateLimitUI(); checkIfChanged();" class="w-16 bg-transparent font-black text-blue-700 outline-none text-lg" value="100">
                 </div>
-                
-                <div class="text-right flex flex-col items-end">
-                    <span id="roleBadge" class="text-white px-2 py-0.5 rounded text-[8px] font-black uppercase mb-1 tracking-widest">---</span>
-                    <span id="cloudStatus" class="text-green-500 font-bold text-[10px] uppercase tracking-widest animate-pulse">● System Live</span>
-                    <span id="activePlatDisplay" class="text-slate-400 font-black text-[9px] uppercase tracking-tighter italic mt-1 text-blue-600">READY</span>
-                </div>
+                <span id="roleBadge" class="text-white px-2 py-0.5 rounded text-[8px] font-black uppercase">---</span>
             </div>
         </header>
 
         <div class="platform-selector grid grid-cols-3 gap-4 mb-6">
-            <button onclick="changePlat('WEB', 100)" id="btn-WEB" class="plat-btn bg-white p-4 rounded-xl shadow-sm border-2 border-transparent font-black transition-all text-slate-600 uppercase italic">Web (<span id="span-WEB">100</span>)</button>
-            <button onclick="changePlat('SELENIUM', 75)" id="btn-SELENIUM" class="plat-btn bg-white p-4 rounded-xl shadow-sm border-2 border-transparent font-black transition-all text-slate-600 uppercase italic">Selenium (<span id="span-SELENIUM">75</span>)</button>
-            <button onclick="changePlat('AUTOMAT', 20)" id="btn-AUTOMAT" class="plat-btn bg-white p-4 rounded-xl shadow-sm border-2 border-transparent font-black transition-all text-slate-600 uppercase italic">Automat (<span id="span-AUTOMAT">20</span>)</button>
+            <button onclick="changePlat('WEB', 100)" id="btn-WEB" class="plat-btn bg-white p-4 rounded-xl shadow-sm border-2 border-transparent font-black text-slate-600 uppercase italic">Web</button>
+            <button onclick="changePlat('SELENIUM', 75)" id="btn-SELENIUM" class="plat-btn bg-white p-4 rounded-xl shadow-sm border-2 border-transparent font-black text-slate-600 uppercase italic">Selenium</button>
+            <button onclick="changePlat('AUTOMAT', 20)" id="btn-AUTOMAT" class="plat-btn bg-white p-4 rounded-xl shadow-sm border-2 border-transparent font-black text-slate-600 uppercase italic">Automat</button>
         </div>
 
         <div id="mainSection" class="hidden space-y-6">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
                     <div class="flex justify-between items-center mb-2">
-                        <h3 class="text-xs font-black text-red-500 uppercase italic">🔥 SPAM ACTIONS</h3>
+                        <h3 class="text-xs font-black text-red-500 uppercase italic">🚫 SPAM ACTIONS</h3>
                         <div class="flex items-center gap-2">
-                            <div class="bg-red-500 text-white px-2 py-1 rounded text-[10px] font-black uppercase">Total: <span id="spam-calculated-total">0</span></div>
-                            <button onclick="showActionMenu('spam')" class="admin-only w-6 h-6 bg-red-500 text-white rounded-full font-bold flex items-center justify-center hover:bg-red-600">+</button>
+                            <div class="bg-red-500 text-white px-2 py-1 rounded text-[10px] font-black uppercase">SUM: <span id="spam-calculated-total">0</span></div>
+                            <button onclick="showActionMenu('spam')" class="admin-only w-6 h-6 bg-red-500 text-white rounded-full font-bold">+</button>
                         </div>
                     </div>
                     <div id="spam-actions-container" class="grid grid-cols-2 gap-3"></div>
@@ -79,44 +64,46 @@
                     <div class="flex justify-between items-center mb-2">
                         <h3 class="text-xs font-black text-blue-500 uppercase italic">📥 INBOX ACTIONS</h3>
                         <div class="flex items-center gap-2">
-                            <div class="bg-blue-600 text-white px-2 py-1 rounded text-[10px] font-black uppercase">Total: <span id="inbox-calculated-total">0</span></div>
-                            <button onclick="showActionMenu('inbox')" class="admin-only w-6 h-6 bg-blue-500 text-white rounded-full font-bold flex items-center justify-center hover:bg-blue-600">+</button>
+                            <div class="bg-blue-600 text-white px-2 py-1 rounded text-[10px] font-black uppercase">SUM: <span id="inbox-calculated-total">0</span></div>
+                            <button onclick="showActionMenu('inbox')" class="admin-only w-6 h-6 bg-blue-500 text-white rounded-full font-bold">+</button>
                         </div>
                     </div>
                     <div id="inbox-actions-container" class="grid grid-cols-2 gap-3"></div>
                 </div>
             </div>
 
-            <div class="bg-white p-6 rounded-2xl shadow-sm grid grid-cols-1 md:grid-cols-3 gap-6 border border-slate-200">
+            <div class="bg-white p-6 rounded-2xl shadow-sm grid grid-cols-1 md:grid-cols-2 gap-6 border border-slate-200">
                 <div>
                     <label class="block text-[10px] font-black text-slate-400 mb-1 uppercase tracking-widest">Deploys Count</label>
-                    <input type="number" id="deployCount" oninput="checkIfChanged(); generateDeploys();" class="w-full p-2 border-2 rounded-lg font-black text-blue-600 text-lg text-center bg-white">
+                    <input type="number" id="deployCount" oninput="checkIfChanged(); generateDeploys();" class="w-full p-2 border-2 rounded-lg font-black text-blue-600 text-lg text-center">
                 </div>
                 <div>
                     <label class="block text-[10px] font-black text-blue-500 mb-1 uppercase italic">🔑 Filter (Code Mot)</label>
-                    <input type="text" id="filterKeyword" oninput="checkIfChanged()" class="w-full p-2 border-2 border-blue-100 rounded-lg font-bold text-blue-700 bg-blue-50 focus:bg-white outline-none">
-                </div>
-                <div class="p-3 bg-slate-50 rounded-xl text-center flex flex-col justify-center">
-                    <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Live Distribution</span>
-                    <div id="distOutput" class="text-[11px] font-black text-blue-700 mt-1"></div>
+                    <input type="text" id="filterKeyword" oninput="checkIfChanged()" class="w-full p-2 border-2 border-blue-100 rounded-lg font-bold text-blue-700 bg-blue-50">
                 </div>
             </div>
 
             <div id="deploysContainer" class="space-y-4"></div>
 
-            <div class="admin-only sticky bottom-4 z-10 shadow-2xl">
-                <button id="saveBtn" disabled onclick="processSave()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-5 rounded-2xl font-black text-xl transition active:scale-95 border-b-4 border-blue-800 uppercase italic">
-                    Save Changes & Notify Group
-                </button>
+            <div class="admin-only sticky bottom-4 z-10">
+                <button id="saveBtn" disabled onclick="processSave()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-5 rounded-2xl font-black text-xl shadow-2xl uppercase italic">Save & Notify</button>
+            </div>
+
+            <div class="admin-only bg-slate-900 p-6 rounded-2xl shadow-xl mt-12">
+                <h3 class="text-white font-black uppercase text-sm mb-4 italic flex items-center gap-2">
+                    <span class="text-blue-500">●</span> Activity Log (Last 10 Changes)
+                </h3>
+                <div id="historyLogs" class="space-y-3 max-h-96 overflow-y-auto pr-2">
+                    </div>
             </div>
         </div>
     </div>
 
     <div id="actionModal" class="fixed inset-0 bg-black/50 hidden z-[300] flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl w-full max-w-xs overflow-hidden shadow-2xl">
-            <div id="modalTitle" class="bg-slate-900 p-4 text-white font-black uppercase text-xs italic tracking-widest text-center">Select Action</div>
+        <div class="bg-white rounded-2xl w-full max-w-xs overflow-hidden">
+            <div id="modalTitle" class="bg-slate-900 p-4 text-white font-black uppercase text-xs text-center">Add Action</div>
             <div id="modalList" class="p-2 grid grid-cols-1 gap-1 max-h-64 overflow-y-auto"></div>
-            <button onclick="closeModal()" class="w-full p-4 bg-slate-100 text-slate-500 font-black uppercase text-[10px] hover:bg-slate-200">Cancel</button>
+            <button onclick="closeModal()" class="w-full p-4 bg-slate-100 font-black uppercase text-[10px]">Cancel</button>
         </div>
     </div>
 
@@ -127,265 +114,226 @@
           authDomain: "ems4-reporting.firebaseapp.com",
           databaseURL: "https://ems4-reporting-default-rtdb.firebaseio.com",
           projectId: "ems4-reporting",
-          storageBucket: "ems4-reporting.firebasestorage.app",
-          messagingSenderId: "290747078412",
-          appId: "1:290747078412:web:f1ddc2273dc07cc6e55b29"
+          databaseURL: "https://ems4-reporting-default-rtdb.firebaseio.com"
         };
         
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
         const telegramToken = '8445418590:AAEzun8AqYrkmFnzMoXaz3UBIQRTQCgQHeI'; 
-        const telegramChatId = '-5224398844'; 
-        const currentUrl = "https://ems4-plan.netlify.app"; 
+        const telegramChatId = '-5224398844';
+        const currentUrl = window.location.origin + window.location.pathname;
 
         let userRole = "viewer";
+        let currentPlatform = "";
+        let boitesTotal = 0;
+        let oldCloudData = null;
 
         window.onload = function() {
             const urlParams = new URLSearchParams(window.location.search);
-            const mode = urlParams.get('mode');
-            const platformFromUrl = urlParams.get('plat');
-
-            if (mode === 'view') {
+            if (urlParams.get('mode') === 'view') {
                 userRole = "viewer";
                 document.body.classList.add('viewer-mode');
                 startApp();
-                // Direct load the platform from URL
-                if(platformFromUrl) {
-                    const counts = { 'WEB': 100, 'SELENIUM': 75, 'AUTOMAT': 20 };
-                    selectPlatform(platformFromUrl, counts[platformFromUrl] || 100);
-                }
+                const plat = urlParams.get('plat') || 'WEB';
+                selectPlatform(plat, 100);
             } else {
                 document.getElementById('loginOverlay').style.display = 'flex';
             }
         };
 
         function checkAccess() {
-            const key = document.getElementById('accessKey').value;
-            if (key === ADMIN_KEY) {
+            if (document.getElementById('accessKey').value === ADMIN_KEY) {
                 userRole = "admin";
                 startApp();
-            } else {
-                document.getElementById('loginError').classList.remove('hidden');
             }
         }
 
         function startApp() {
             document.getElementById('loginOverlay').style.display = 'none';
             document.getElementById('appContent').classList.remove('hidden');
-            const badge = document.getElementById('roleBadge');
-            badge.innerText = userRole.toUpperCase();
-            badge.className = userRole === 'admin' ? "bg-red-600 text-white px-2 py-0.5 rounded text-[8px] font-black uppercase mb-1" : "bg-blue-600 text-white px-2 py-0.5 rounded text-[8px] font-black uppercase mb-1";
+            document.getElementById('roleBadge').innerText = userRole.toUpperCase();
+            document.getElementById('roleBadge').className = userRole === 'admin' ? "bg-red-600 text-white px-2 py-0.5 rounded text-[8px] font-black" : "bg-blue-600 text-white px-2 py-0.5 rounded text-[8px] font-black";
         }
 
-        // Logic for platform switching
-        const ACTION_OPTIONS = {
-            spam: ["REPORT NOT SPAM", "SHOW IMAGE", "REPLY", "CLICK", "FORWARD", "MOVE TO INBOX", "SELECT ALL REPORT NOT SPAM", "MARK AS IMPORTANT", "STARRED"],
-            inbox: ["READ", "SHOW IMAGE", "REPLY", "CLICK", "FORWARD", "REPORT SPAM", "ARCHIVE", "MOVE TO FOLDER", "MARK AS IMPORTANT", "STARRED"]
-        };
-
-        const TERMINAL_ACTIONS = {
-            spam: ["REPORT NOT SPAM", "SELECT ALL REPORT NOT SPAM", "MOVE TO INBOX"],
-            inbox: ["ARCHIVE", "MOVE TO FOLDER", "REPORT SPAM"]
-        };
-
-        let currentPlatform = "";
-        let boitesTotal = 0;
-        let oldCloudData = null;
-
-        function showActionMenu(type) {
-            if(userRole === 'viewer') return;
-            const modal = document.getElementById('actionModal');
-            const list = document.getElementById('modalList');
-            document.getElementById('modalTitle').innerText = `ADD ${type.toUpperCase()} ACTION`;
-            list.innerHTML = '';
-            ACTION_OPTIONS[type].forEach(act => {
-                const btn = document.createElement('button');
-                btn.className = "w-full text-left p-3 text-[10px] font-black uppercase hover:bg-blue-50 rounded-lg transition border border-transparent hover:border-blue-100";
-                btn.innerText = act;
-                btn.onclick = () => { addActionUI(type, act, 0); closeModal(); };
-                list.appendChild(btn);
+        function calculateTotals() {
+            ['spam', 'inbox'].forEach(type => {
+                let sum = 0;
+                document.querySelectorAll(`#${type}-actions-container input`).forEach(inp => {
+                    sum += parseInt(inp.value) || 0;
+                });
+                document.getElementById(`${type}-calculated-total`).innerText = sum;
             });
-            modal.classList.remove('hidden');
         }
-
-        function closeModal() { document.getElementById('actionModal').classList.add('hidden'); }
 
         function addActionUI(type, name, value) {
             const container = document.getElementById(`${type}-actions-container`);
             if ([...container.querySelectorAll('label')].some(l => l.innerText === name)) return;
             const div = document.createElement('div');
-            const isSpam = type === 'spam';
-            div.className = `${isSpam ? 'bg-red-50 border-red-100' : 'bg-blue-50 border-blue-100'} p-2 rounded-xl border relative group action-chip`;
-            
-            const delBtn = userRole === 'admin' ? `<button onclick="this.parentElement.remove(); calculateTotals(); checkIfChanged();" class="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 text-[10px] font-bold opacity-0 group-hover:opacity-100 transition-opacity">×</button>` : '';
-
+            const color = type === 'spam' ? 'red' : 'blue';
+            div.className = `bg-${color}-50 border-${color}-100 p-2 rounded-xl border relative action-chip`;
             div.innerHTML = `
-                ${delBtn}
-                <label class="block text-[8px] font-black ${isSpam ? 'text-red-400' : 'text-blue-400'} uppercase">${name}</label>
-                <input type="number" data-action="${name}" oninput="calculateTotals(); checkIfChanged()" class="action-input w-full bg-transparent font-black ${isSpam ? 'text-red-700' : 'text-blue-700'} text-lg outline-none" value="${value}">
+                ${userRole === 'admin' ? `<button onclick="this.parentElement.remove(); calculateTotals(); checkIfChanged();" class="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 text-[10px]">×</button>` : ''}
+                <label class="block text-[8px] font-black text-${color}-400 uppercase">${name}</label>
+                <input type="number" data-action="${name}" oninput="calculateTotals(); checkIfChanged()" class="w-full bg-transparent font-black text-${color}-700 text-lg outline-none" value="${value}">
             `;
             container.appendChild(div);
             calculateTotals();
-            if(userRole === 'admin') checkIfChanged();
-        }
-
-        function calculateTotals() {
-            let spamMax = 0;
-            document.querySelectorAll('#spam-actions-container .action-chip').forEach(el => {
-                const name = el.querySelector('label').innerText;
-                const val = parseInt(el.querySelector('input').value) || 0;
-                if (TERMINAL_ACTIONS.spam.includes(name) && val > spamMax) spamMax = val;
-            });
-            document.getElementById('spam-calculated-total').innerText = spamMax;
-
-            let inboxMax = 0;
-            document.querySelectorAll('#inbox-actions-container .action-chip').forEach(el => {
-                const name = el.querySelector('label').innerText;
-                const val = parseInt(el.querySelector('input').value) || 0;
-                if (TERMINAL_ACTIONS.inbox.includes(name) && val > inboxMax) inboxMax = val;
-            });
-            document.getElementById('inbox-calculated-total').innerText = inboxMax;
-        }
-
-        function updateLimitUI() {
-            const val = document.getElementById('globalLimit').value;
-            boitesTotal = parseInt(val) || 0;
-            document.getElementById(`span-${currentPlatform}`).innerText = val;
-            generateDeploys(null, true);
-        }
-
-        function changePlat(p, defaultVal) {
-            document.getElementById('globalLimit').value = defaultVal;
-            selectPlatform(p, defaultVal);
         }
 
         async function selectPlatform(p, count) {
             currentPlatform = p;
-            boitesTotal = count;
             document.getElementById('loadingOverlay').style.display = 'flex';
-            document.getElementById('limitContainer').classList.remove('hidden');
-            document.getElementById('activePlatDisplay').innerText = "PLATFORM: " + p;
-            
-            document.querySelectorAll('.plat-btn').forEach(b => b.classList.remove('active', 'border-blue-600', 'text-blue-600'));
-            if(document.getElementById('btn-'+p)) document.getElementById('btn-'+p).classList.add('active', 'border-blue-600', 'text-blue-600');
+            document.querySelectorAll('.plat-btn').forEach(b => b.classList.remove('active'));
+            if(document.getElementById('btn-'+p)) document.getElementById('btn-'+p).classList.add('active');
             document.getElementById('mainSection').classList.remove('hidden');
+            document.getElementById('limitContainer').classList.remove('hidden');
 
-            db.ref('ems4/plans/' + currentPlatform + '/current').once('value', (snapshot) => {
-                oldCloudData = snapshot.val();
-                document.getElementById('spam-actions-container').innerHTML = '';
-                document.getElementById('inbox-actions-container').innerHTML = '';
-                if (oldCloudData) {
-                    document.getElementById('globalLimit').value = oldCloudData.limit || count;
-                    boitesTotal = oldCloudData.limit || count;
-                    document.getElementById(`span-${currentPlatform}`).innerText = boitesTotal;
-                    document.getElementById('deployCount').value = oldCloudData.deploys.length;
-                    document.getElementById('filterKeyword').value = oldCloudData.filter || "";
-                    if(oldCloudData.actions_list) oldCloudData.actions_list.forEach(a => addActionUI(a.type, a.name, a.value));
-                    generateDeploys(oldCloudData.deploys);
-                } else {
-                    document.getElementById('deployCount').value = 8;
-                    generateDeploys();
-                }
-                calculateTotals();
-                document.getElementById('saveBtn').disabled = true;
-                document.getElementById('loadingOverlay').style.display = 'none';
-            });
+            // Load Data
+            const snap = await db.ref(`ems4/plans/${p}/current`).once('value');
+            oldCloudData = snap.val();
+            
+            // Load History (Admin Only)
+            if(userRole === 'admin') loadHistory(p);
+
+            document.getElementById('spam-actions-container').innerHTML = '';
+            document.getElementById('inbox-actions-container').innerHTML = '';
+
+            if (oldCloudData) {
+                document.getElementById('globalLimit').value = oldCloudData.limit || count;
+                boitesTotal = oldCloudData.limit || count;
+                document.getElementById('deployCount').value = oldCloudData.deploys.length;
+                document.getElementById('filterKeyword').value = oldCloudData.filter || "";
+                if(oldCloudData.actions_list) oldCloudData.actions_list.forEach(a => addActionUI(a.type, a.name, a.value));
+                generateDeploys(oldCloudData.deploys);
+            } else {
+                document.getElementById('deployCount').value = 8;
+                generateDeploys();
+            }
+            calculateTotals();
+            document.getElementById('saveBtn').disabled = true;
+            document.getElementById('loadingOverlay').style.display = 'none';
         }
 
-        function checkIfChanged() { if(userRole === 'admin') document.getElementById('saveBtn').disabled = false; }
-
-        function generateDeploys(savedData = null, isUpdate = false) {
-            const num = parseInt(document.getElementById('deployCount').value) || 0;
-            const container = document.getElementById('deploysContainer');
-            let currentUIData = [];
-            if (isUpdate) {
-                document.querySelectorAll('.deploy-card').forEach(c => {
-                    currentUIData.push({
-                        from: c.querySelector('.from-val').value, id: c.querySelector('.id-val').value,
-                        batch: c.querySelector('.batch-val').value, rules: c.querySelector('.rules-val').value,
-                        ips: c.querySelector('.ips-val').value
-                    });
-                });
-            }
+        async function loadHistory(p) {
+            const histSnap = await db.ref(`ems4/plans/${p}/history`).limitToLast(10).once('value');
+            const container = document.getElementById('historyLogs');
             container.innerHTML = "";
-            const base = Math.floor(boitesTotal / num);
-            const remainder = boitesTotal % num;
-            let distArray = [];
-            for (let i = 0; i < num; i++) {
-                const bCount = base + (i < remainder ? 1 : 0);
-                distArray.push(bCount);
-                const d = (savedData && savedData[i]) ? savedData[i] : (currentUIData[i] || { from: '', id: '', batch: '10/3000P', rules: 'SELECT ALL IPS', ips: '' });
+            const logs = [];
+            histSnap.forEach(s => { logs.unshift(s.val()); });
+            logs.forEach(log => {
                 container.innerHTML += `
-                    <div class="deploy-card bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                        <div class="flex justify-between items-center mb-4 border-b pb-2 text-[10px] font-black">
-                            <span class="bg-slate-800 text-white px-3 py-1 rounded-full uppercase italic">DEPLOY ${i+1}</span>
-                            <span class="text-blue-600 underline">${bCount} BOITES</span>
+                    <div class="log-item bg-slate-800/50 p-3 rounded-r-lg border-blue-500">
+                        <div class="flex justify-between text-[10px] mb-1">
+                            <span class="text-blue-400 font-bold">${log.timestamp}</span>
+                            <span class="text-slate-500">Admin</span>
                         </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
-                            <input type="text" oninput="checkIfChanged()" class="from-val p-2 border rounded text-xs font-bold uppercase" value="${d.from}" placeholder="FROM">
-                            <input type="text" oninput="checkIfChanged()" class="id-val p-2 border rounded text-xs font-black text-blue-600 uppercase" value="${d.id}" placeholder="ID">
-                            <select onchange="checkIfChanged()" class="batch-val p-2 border rounded text-xs font-bold uppercase">
-                                <option ${d.batch == '10/3000P' ? 'selected' : ''}>10/3000P</option>
-                                <option ${d.batch == '5/3000P' ? 'selected' : ''}>5/3000P</option>
-                                <option ${d.batch == '0/0 Parallel' ? 'selected' : ''}>0/0 Parallel</option>
-                            </select>
-                            <select onchange="checkIfChanged()" class="rules-val p-2 border rounded text-xs font-bold uppercase">
-                                <option ${d.rules == 'SELECT ALL IPS' ? 'selected' : ''}>SELECT ALL IPS</option>
-                                <option ${d.rules == 'SELECT 30 IPS MAX' ? 'selected' : ''}>SELECT 30 IPS MAX</option>
-                            </select>
-                        </div>
-                        <textarea oninput="checkIfChanged()" class="ips-val w-full p-2 border rounded text-[10px] font-mono bg-slate-50 uppercase" rows="2" placeholder="IP LIST">${d.ips}</textarea>
+                        <div class="text-[11px] text-slate-200 leading-relaxed">${log.changeSummary}</div>
                     </div>`;
-            }
-            document.getElementById('distOutput').innerText = distArray.join(' | ');
+            });
         }
 
         async function processSave() {
-            if(userRole !== 'admin') return;
-            const currentFilter = document.getElementById('filterKeyword').value.trim();
             const limit = parseInt(document.getElementById('globalLimit').value);
+            const filter = document.getElementById('filterKeyword').value;
+            const timestamp = new Date().toLocaleString('en-GB');
             
-            let actions_list = [];
+            let actions = [];
             document.querySelectorAll('.action-chip').forEach(el => {
-                const inp = el.querySelector('input');
-                const type = el.closest('#spam-actions-container') ? 'spam' : 'inbox';
-                actions_list.push({ type, name: inp.dataset.action, value: inp.value });
+                actions.push({ 
+                    type: el.closest('#spam-actions-container') ? 'spam' : 'inbox',
+                    name: el.querySelector('label').innerText,
+                    value: el.querySelector('input').value
+                });
             });
 
-            let newData = [];
-            document.querySelectorAll('.deploy-card').forEach(c => {
-                newData.push({
-                    from: c.querySelector('.from-val').value.trim(),
-                    id: c.querySelector('.id-val').value.trim(),
+            let deploys = [];
+            let changeSummary = [];
+
+            // Detect Changes for History
+            if(oldCloudData.limit != limit) changeSummary.push(`Changed Limit to ${limit}`);
+            if(oldCloudData.filter != filter) changeSummary.push(`Filter: ${filter}`);
+
+            document.querySelectorAll('.deploy-card').forEach((c, i) => {
+                const d = {
+                    from: c.querySelector('.from-val').value,
+                    id: c.querySelector('.id-val').value,
                     batch: c.querySelector('.batch-val').value,
                     rules: c.querySelector('.rules-val').value,
-                    ips: c.querySelector('.ips-val').value.trim()
-                });
+                    ips: c.querySelector('.ips-val').value
+                };
+                deploys.push(d);
+                
+                // Detailed diff per deploy
+                const oldD = oldCloudData.deploys[i] || {};
+                if(oldD.from != d.from) changeSummary.push(`D${i+1} From: ${d.from}`);
+                if(oldD.id != d.id) changeSummary.push(`D${i+1} ID: ${d.id}`);
+                if(oldD.ips != d.ips) changeSummary.push(`D${i+1} IPs updated`);
             });
 
+            const summaryStr = changeSummary.length > 0 ? changeSummary.join(' | ') : "General Update";
+            const saveObj = { deploys, filter, limit, actions_list: actions, timestamp };
+
             document.getElementById('loadingOverlay').style.display = 'flex';
-            const timestamp = new Date().toLocaleString('en-GB', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+            await db.ref(`ems4/plans/${currentPlatform}/current`).set(saveObj);
+            await db.ref(`ems4/plans/${currentPlatform}/history`).push({ timestamp, changeSummary: summaryStr });
 
-            try {
-                const saveObj = { deploys: newData, filter: currentFilter, limit, actions_list, timestamp };
-                await db.ref('ems4/plans/' + currentPlatform + '/current').set(saveObj);
+            const viewerLink = `${currentUrl}?mode=view&plat=${currentPlatform}`;
+            await fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    chat_id: telegramChatId, 
+                    text: `🚀 *${currentPlatform} UPDATED*\n📝 *Log:* ${summaryStr.substring(0,100)}...\n🔗 [VIEW HERE](${viewerLink})`, 
+                    parse_mode: 'Markdown' 
+                })
+            });
 
-                // IMPORTANT: Link with platform parameter
-                const viewerLink = `${currentUrl}?mode=view&plat=${currentPlatform}`;
-                const botMsg = `🚀 *UPDATE [#${currentPlatform}]*\n━━━━━━━━━━━━━━━\n🎯 *Filter:* ${currentFilter}\n🕒 *Time:* ${timestamp}\n🌱 *Seeds/Hr:* ${limit}\n━━━━━━━━━━━━━━━\n🔗 [OPEN ${currentPlatform} VIEW](${viewerLink})`;
-
-                await fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ chat_id: telegramChatId, text: botMsg, parse_mode: 'Markdown' })
-                });
-
-                alert("✅ Sync Success!");
-                oldCloudData = JSON.parse(JSON.stringify(saveObj));
-                document.getElementById('saveBtn').disabled = true;
-            } catch (e) { alert("Error: " + e.message); }
-            document.getElementById('loadingOverlay').style.display = 'none';
+            alert("Saved!");
+            location.reload();
         }
+
+        // Standard helpers
+        function generateDeploys(savedData = null) {
+            const num = parseInt(document.getElementById('deployCount').value) || 0;
+            const container = document.getElementById('deploysContainer');
+            container.innerHTML = "";
+            for (let i = 0; i < num; i++) {
+                const d = (savedData && savedData[i]) ? savedData[i] : { from: '', id: '', batch: '10/3000P', rules: 'SELECT ALL IPS', ips: '' };
+                container.innerHTML += `
+                    <div class="deploy-card bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+                        <div class="text-[10px] font-black mb-2 uppercase">Deploy ${i+1}</div>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2">
+                            <input type="text" oninput="checkIfChanged()" class="from-val p-2 border rounded text-xs" value="${d.from}" placeholder="FROM">
+                            <input type="text" oninput="checkIfChanged()" class="id-val p-2 border rounded text-xs font-black text-blue-600" value="${d.id}" placeholder="ID">
+                            <select onchange="checkIfChanged()" class="batch-val p-2 border rounded text-xs">
+                                <option ${d.batch == '10/3000P' ? 'selected' : ''}>10/3000P</option>
+                                <option ${d.batch == '5/3000P' ? 'selected' : ''}>5/3000P</option>
+                            </select>
+                            <select onchange="checkIfChanged()" class="rules-val p-2 border rounded text-xs">
+                                <option ${d.rules == 'SELECT ALL IPS' ? 'selected' : ''}>SELECT ALL IPS</option>
+                            </select>
+                        </div>
+                        <textarea oninput="checkIfChanged()" class="ips-val w-full p-2 border rounded text-[10px] font-mono bg-slate-50" rows="1" placeholder="IPs">${d.ips}</textarea>
+                    </div>`;
+            }
+        }
+        function changePlat(p, v) { selectPlatform(p, v); }
+        function checkIfChanged() { document.getElementById('saveBtn').disabled = false; }
+        function showActionMenu(type) {
+            const list = document.getElementById('modalList');
+            list.innerHTML = "";
+            const opts = type === 'spam' ? ["NOT SPAM", "REPLY", "CLICK", "MOVE"] : ["READ", "ARCHIVE", "STAR"];
+            opts.forEach(o => {
+                const b = document.createElement('button');
+                b.className = "p-3 text-left hover:bg-slate-100 uppercase text-[10px] font-bold";
+                b.innerText = o;
+                b.onclick = () => { addActionUI(type, o, 0); closeModal(); checkIfChanged(); };
+                list.appendChild(b);
+            });
+            document.getElementById('actionModal').classList.remove('hidden');
+        }
+        function closeModal() { document.getElementById('actionModal').classList.add('hidden'); }
+        function updateLimitUI() { boitesTotal = parseInt(document.getElementById('globalLimit').value); generateDeploys(null); }
     </script>
 </body>
 </html>
