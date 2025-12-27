@@ -11,11 +11,8 @@
         .plat-btn.active { border-color: #2563eb; background-color: #eff6ff; color: #2563eb; ring: 4px; ring-color: #eff6ff; }
         #loadingOverlay, #loginOverlay { background: rgba(255,255,255,0.95); position: fixed; inset: 0; z-index: 200; align-items: center; justify-content: center; display: flex; }
         #loadingOverlay { display: none; z-index: 210; }
-        
-        /* Roles Visibility */
         .viewer-mode .admin-only, .viewer-mode .super-only, .viewer-mode .platform-selector, .viewer-mode #statsSection { display: none !important; }
-        .admin-mode .super-only { display: none !important; } /* Admin75 cannot see Super elements */
-
+        .admin-mode .super-only { display: none !important; }
         #saveBtn:disabled, #updateStatsBtn:disabled { background-color: #cbd5e1; cursor: not-allowed; opacity: 0.7; }
         .readonly-stat { pointer-events: none !important; background-color: transparent; }
         .viewer-mode input, .viewer-mode select, .viewer-mode textarea { pointer-events: none !important; background-color: #f8fafc; border:none; }
@@ -92,6 +89,7 @@
 
         <div id="mainSection" class="hidden space-y-6">
             <div id="platIndicator" class="text-center font-black text-blue-600 uppercase italic text-sm tracking-widest">---</div>
+            
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
                     <div class="flex justify-between items-center mb-2">
@@ -188,9 +186,7 @@
             if (input === SUPER_KEY || input === ADMIN_KEY) { 
                 localStorage.setItem('ems4_key', input); 
                 location.reload(); 
-            } else { 
-                alert("Access Denied!"); 
-            }
+            } else { alert("Access Denied!"); }
         }
 
         function logout() { localStorage.removeItem('ems4_key'); location.reload(); }
@@ -206,18 +202,16 @@
                 label.innerText = "ROLE: SUPER ADMIN"; 
                 badge.innerText = "SUPER"; 
                 badge.className = "bg-purple-600 text-white px-2 py-0.5 rounded text-[8px] font-black";
-                updateBtn.style.display = 'block'; // Show only for Super
+                updateBtn.style.display = 'block';
             } else if (userRole === 'admin') {
                 label.innerText = "ROLE: ADMIN"; 
                 badge.innerText = "ADMIN"; 
                 badge.className = "bg-slate-600 text-white px-2 py-0.5 rounded text-[8px] font-black";
                 document.querySelectorAll('.stat-input').forEach(el => { el.readOnly = true; el.classList.add('readonly-stat'); });
-                updateBtn.style.display = 'none'; // Explicitly hide for Admin
             } else {
                 label.innerText = "ROLE: VIEWER"; 
                 badge.innerText = "VIEWER"; 
                 badge.className = "bg-slate-600 text-white px-2 py-0.5 rounded text-[8px] font-black";
-                updateBtn.style.display = 'none';
             }
         }
 
@@ -231,11 +225,8 @@
             document.getElementById('mainSection').classList.remove('hidden');
             
             const statsSec = document.getElementById('statsSection');
-            if (userRole === 'viewer') {
-                statsSec.classList.add('hidden');
-            } else {
-                statsSec.classList.remove('hidden');
-            }
+            if (userRole === 'viewer') statsSec.classList.add('hidden');
+            else statsSec.classList.remove('hidden');
             
             document.getElementById('limitContainer').classList.remove('hidden');
             document.getElementById('prodContainer').classList.remove('hidden');
@@ -268,6 +259,7 @@
         function getChanges() {
             let diffs = [];
             if(!oldCloudData) return diffs;
+
             const curLimit = parseInt(document.getElementById('globalLimit').value);
             const curFilter = document.getElementById('filterKeyword').value;
             const curProd = document.getElementById('prodType').value;
@@ -276,6 +268,7 @@
             if (curLimit !== (oldCloudData.limit || 100)) diffs.push(`Limit: ${curLimit}`);
             if (curFilter !== (oldCloudData.filter || "")) diffs.push(`Filter: ${curFilter}`);
 
+            // Deploys
             const curDeploys = Array.from(document.querySelectorAll('.deploy-card')).map((c, idx) => ({
                 idx: idx + 1,
                 from: c.querySelector('.from-val').value, 
@@ -284,7 +277,6 @@
                 rules: c.querySelector('.rules-val').value,
                 ips: c.querySelector('.ips-val').value
             }));
-
             const oldDeploys = oldCloudData.deploys || [];
             curDeploys.forEach((d, i) => {
                 const old = oldDeploys[i] || {};
@@ -293,12 +285,10 @@
                 if (d.batch !== (old.batch || "10/3000P")) dChanges.push(`batch: ${d.batch}`);
                 if (d.rules !== (old.rules || "SELECT ALL IPS")) dChanges.push(`rules: ${d.rules}`);
                 if (d.from !== (old.from || "") || d.id !== (old.id || "")) dChanges.push("IDs updated");
-                
-                if (dChanges.length > 0) {
-                    diffs.push(`Deploy ${d.idx}: ${dChanges.join(' | ')}`);
-                }
+                if (dChanges.length > 0) diffs.push(`Deploy ${d.idx}: ${dChanges.join(' | ')}`);
             });
 
+            // Actions Comparison (Detection for Add, Change, and Remove)
             const curActions = Array.from(document.querySelectorAll('.action-chip')).map(el => ({
                 n: el.querySelector('label').innerText, 
                 v: parseInt(el.querySelector('input').value) || 0,
@@ -306,10 +296,17 @@
             }));
             const oldActions = oldCloudData.actions_list || [];
 
+            // Detect Changes and Additions
             curActions.forEach(newA => {
                 const oldA = oldActions.find(o => o.name === newA.n && o.type === newA.t);
                 if(!oldA) diffs.push(`[${newA.t}] Added ${newA.n}: ${newA.v}`);
                 else if (oldA.value !== newA.v) diffs.push(`[${newA.t}] ${newA.n}: ${oldA.value} ➜ ${newA.v}`);
+            });
+
+            // Detect Deletions
+            oldActions.forEach(oldA => {
+                const stillExists = curActions.some(c => c.n === oldA.name && c.t === oldA.type);
+                if(!stillExists) diffs.push(`[${oldA.type}] Removed ${oldA.name}`);
             });
 
             return diffs;
@@ -333,6 +330,7 @@
 
             const saveObj = { ...oldCloudData, deploys, filter, limit, prodType, actions_list: actions, timestamp: new Date().toLocaleString() };
             document.getElementById('loadingOverlay').style.display = 'flex';
+            
             await db.ref(`ems4/plans/${currentPlatform}/current`).set(saveObj);
 
             const telegramMsg = `🚀 <b>MODIF: ${currentPlatform}</b>\n` +
@@ -350,6 +348,14 @@
             location.reload();
         }
 
+        function compareData() { 
+            if (oldCloudData && userRole !== 'viewer') {
+                const diffs = getChanges();
+                document.getElementById('saveBtn').disabled = (diffs.length === 0);
+            }
+        }
+
+        // --- Rest of functions unchanged ---
         function checkStatsChange() {
             if (!oldCloudData || userRole !== 'super') return;
             const s = oldCloudData.stats || {};
@@ -376,13 +382,6 @@
             document.getElementById('updateStatsBtn').disabled = true;
             document.getElementById('loadingOverlay').style.display = 'none';
             alert("Stats Updated Successfully!");
-        }
-
-        function compareData() { 
-            if (oldCloudData && userRole !== 'viewer') {
-                const diffs = getChanges();
-                document.getElementById('saveBtn').disabled = (diffs.length === 0);
-            }
         }
 
         function changePlat(p) { selectPlatform(p); }
