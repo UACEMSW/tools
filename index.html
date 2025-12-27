@@ -38,6 +38,7 @@
                     <input type="number" id="globalLimit" oninput="updateLimitUI(); checkIfChanged();" class="w-16 bg-transparent font-black text-blue-700 outline-none text-lg" value="100">
                 </div>
                 <span id="roleBadge" class="text-white px-2 py-0.5 rounded text-[8px] font-black uppercase">---</span>
+                <button onclick="logout()" class="admin-only text-[10px] text-red-500 font-bold underline">Logout</button>
             </div>
         </header>
 
@@ -53,7 +54,7 @@
                     <div class="flex justify-between items-center mb-2">
                         <h3 class="text-xs font-black text-red-500 uppercase italic">🚫 SPAM ACTIONS</h3>
                         <div class="flex items-center gap-2">
-                            <div class="bg-red-500 text-white px-2 py-1 rounded text-[10px] font-black uppercase">SUM: <span id="spam-calculated-total">0</span></div>
+                            <div class="bg-red-500 text-white px-2 py-1 rounded text-[10px] font-black uppercase">TOTAL: <span id="spam-calculated-total">0</span></div>
                             <button onclick="showActionMenu('spam')" class="admin-only w-6 h-6 bg-red-500 text-white rounded-full font-bold">+</button>
                         </div>
                     </div>
@@ -64,7 +65,7 @@
                     <div class="flex justify-between items-center mb-2">
                         <h3 class="text-xs font-black text-blue-500 uppercase italic">📥 INBOX ACTIONS</h3>
                         <div class="flex items-center gap-2">
-                            <div class="bg-blue-600 text-white px-2 py-1 rounded text-[10px] font-black uppercase">SUM: <span id="inbox-calculated-total">0</span></div>
+                            <div class="bg-blue-600 text-white px-2 py-1 rounded text-[10px] font-black uppercase">TOTAL: <span id="inbox-calculated-total">0</span></div>
                             <button onclick="showActionMenu('inbox')" class="admin-only w-6 h-6 bg-blue-500 text-white rounded-full font-bold">+</button>
                         </div>
                     </div>
@@ -91,10 +92,9 @@
 
             <div class="admin-only bg-slate-900 p-6 rounded-2xl shadow-xl mt-12">
                 <h3 class="text-white font-black uppercase text-sm mb-4 italic flex items-center gap-2">
-                    <span class="text-blue-500">●</span> Activity Log (Last 10 Changes)
+                    <span class="text-blue-500">●</span> Last Updates (10)
                 </h3>
-                <div id="historyLogs" class="space-y-3 max-h-96 overflow-y-auto pr-2">
-                    </div>
+                <div id="historyLogs" class="space-y-3 max-h-96 overflow-y-auto pr-2"></div>
             </div>
         </div>
     </div>
@@ -113,40 +113,46 @@
           apiKey: "AIzaSyAFR96bibEGLaMroqFZCLcSHyCoAdewz78",
           authDomain: "ems4-reporting.firebaseapp.com",
           databaseURL: "https://ems4-reporting-default-rtdb.firebaseio.com",
-          projectId: "ems4-reporting",
-          databaseURL: "https://ems4-reporting-default-rtdb.firebaseio.com"
+          projectId: "ems4-reporting"
         };
         
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
         const telegramToken = '8445418590:AAEzun8AqYrkmFnzMoXaz3UBIQRTQCgQHeI'; 
         const telegramChatId = '-5224398844';
-        const currentUrl = window.location.origin + window.location.pathname;
+        const netlifyBase = "https://ems4-plan.netlify.app";
 
         let userRole = "viewer";
         let currentPlatform = "";
-        let boitesTotal = 0;
         let oldCloudData = null;
 
         window.onload = function() {
             const urlParams = new URLSearchParams(window.location.search);
+            const savedKey = localStorage.getItem('ems4_admin_key');
             if (urlParams.get('mode') === 'view') {
                 userRole = "viewer";
                 document.body.classList.add('viewer-mode');
                 startApp();
                 const plat = urlParams.get('plat') || 'WEB';
                 selectPlatform(plat, 100);
+            } else if (savedKey === ADMIN_KEY) {
+                userRole = "admin";
+                startApp();
             } else {
                 document.getElementById('loginOverlay').style.display = 'flex';
             }
         };
 
         function checkAccess() {
-            if (document.getElementById('accessKey').value === ADMIN_KEY) {
+            const input = document.getElementById('accessKey').value;
+            if (input === ADMIN_KEY) {
+                localStorage.setItem('ems4_admin_key', input);
                 userRole = "admin";
                 startApp();
-            }
+            } else { alert("Wrong Key!"); }
         }
+
+        function logout() { localStorage.removeItem('ems4_admin_key'); location.reload(); }
 
         function startApp() {
             document.getElementById('loginOverlay').style.display = 'none';
@@ -158,9 +164,7 @@
         function calculateTotals() {
             ['spam', 'inbox'].forEach(type => {
                 let sum = 0;
-                document.querySelectorAll(`#${type}-actions-container input`).forEach(inp => {
-                    sum += parseInt(inp.value) || 0;
-                });
+                document.querySelectorAll(`#${type}-actions-container input`).forEach(inp => { sum += parseInt(inp.value) || 0; });
                 document.getElementById(`${type}-calculated-total`).innerText = sum;
             });
         }
@@ -188,27 +192,19 @@
             document.getElementById('mainSection').classList.remove('hidden');
             document.getElementById('limitContainer').classList.remove('hidden');
 
-            // Load Data
             const snap = await db.ref(`ems4/plans/${p}/current`).once('value');
-            oldCloudData = snap.val();
+            oldCloudData = snap.val() || { limit: count, filter: "", deploys: [], actions_list: [] };
             
-            // Load History (Admin Only)
             if(userRole === 'admin') loadHistory(p);
 
             document.getElementById('spam-actions-container').innerHTML = '';
             document.getElementById('inbox-actions-container').innerHTML = '';
-
-            if (oldCloudData) {
-                document.getElementById('globalLimit').value = oldCloudData.limit || count;
-                boitesTotal = oldCloudData.limit || count;
-                document.getElementById('deployCount').value = oldCloudData.deploys.length;
-                document.getElementById('filterKeyword').value = oldCloudData.filter || "";
-                if(oldCloudData.actions_list) oldCloudData.actions_list.forEach(a => addActionUI(a.type, a.name, a.value));
-                generateDeploys(oldCloudData.deploys);
-            } else {
-                document.getElementById('deployCount').value = 8;
-                generateDeploys();
-            }
+            document.getElementById('globalLimit').value = oldCloudData.limit || count;
+            document.getElementById('deployCount').value = oldCloudData.deploys ? oldCloudData.deploys.length : 8;
+            document.getElementById('filterKeyword').value = oldCloudData.filter || "";
+            if(oldCloudData.actions_list) oldCloudData.actions_list.forEach(a => addActionUI(a.type.toLowerCase(), a.name, a.value));
+            
+            generateDeploys(oldCloudData.deploys);
             calculateTotals();
             document.getElementById('saveBtn').disabled = true;
             document.getElementById('loadingOverlay').style.display = 'none';
@@ -222,12 +218,9 @@
             histSnap.forEach(s => { logs.unshift(s.val()); });
             logs.forEach(log => {
                 container.innerHTML += `
-                    <div class="log-item bg-slate-800/50 p-3 rounded-r-lg border-blue-500">
-                        <div class="flex justify-between text-[10px] mb-1">
-                            <span class="text-blue-400 font-bold">${log.timestamp}</span>
-                            <span class="text-slate-500">Admin</span>
-                        </div>
-                        <div class="text-[11px] text-slate-200 leading-relaxed">${log.changeSummary}</div>
+                    <div class="log-item bg-slate-800/50 p-3 rounded-r-lg border-blue-500 mb-2">
+                        <div class="flex justify-between text-[10px] mb-1"><span class="text-blue-400 font-bold">${log.timestamp}</span></div>
+                        <div class="text-[11px] text-slate-200 leading-relaxed">${log.changeSummary.replace(/\n/g, '<br>')}</div>
                     </div>`;
             });
         }
@@ -235,24 +228,34 @@
         async function processSave() {
             const limit = parseInt(document.getElementById('globalLimit').value);
             const filter = document.getElementById('filterKeyword').value;
-            const timestamp = new Date().toLocaleString('en-GB');
+            const now = new Date();
+            const timestamp = now.toLocaleDateString('en-GB', {day:'2-digit', month:'2-digit'}) + ", " + 
+                              now.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
             
             let actions = [];
             document.querySelectorAll('.action-chip').forEach(el => {
                 actions.push({ 
-                    type: el.closest('#spam-actions-container') ? 'spam' : 'inbox',
+                    type: el.closest('#spam-actions-container') ? 'SPAM' : 'INBOX',
                     name: el.querySelector('label').innerText,
-                    value: el.querySelector('input').value
+                    value: parseInt(el.querySelector('input').value) || 0
                 });
             });
 
             let deploys = [];
-            let changeSummary = [];
+            let logDetails = [];
 
-            // Detect Changes for History
-            if(oldCloudData.limit != limit) changeSummary.push(`Changed Limit to ${limit}`);
-            if(oldCloudData.filter != filter) changeSummary.push(`Filter: ${filter}`);
+            // 1. Check Limit & Filter
+            if(oldCloudData.limit != limit) logDetails.push(`• SEEDS: ${oldCloudData.limit} -> ${limit}`);
+            if(oldCloudData.filter != filter) logDetails.push(`• FILTER: ${oldCloudData.filter || 'None'} -> ${filter}`);
 
+            // 2. Check Actions (Detailed)
+            actions.forEach(newAct => {
+                const oldAct = (oldCloudData.actions_list || []).find(a => a.name === newAct.name && a.type === newAct.type);
+                const oldVal = oldAct ? parseInt(oldAct.value) : 0;
+                if(oldVal !== newAct.value) logDetails.push(`• ${newAct.name}: ${oldVal} -> ${newAct.value}`);
+            });
+
+            // 3. Check Deploys (Detailed per field)
             document.querySelectorAll('.deploy-card').forEach((c, i) => {
                 const d = {
                     from: c.querySelector('.from-val').value,
@@ -262,37 +265,45 @@
                     ips: c.querySelector('.ips-val').value
                 };
                 deploys.push(d);
-                
-                // Detailed diff per deploy
-                const oldD = oldCloudData.deploys[i] || {};
-                if(oldD.from != d.from) changeSummary.push(`D${i+1} From: ${d.from}`);
-                if(oldD.id != d.id) changeSummary.push(`D${i+1} ID: ${d.id}`);
-                if(oldD.ips != d.ips) changeSummary.push(`D${i+1} IPs updated`);
+
+                const oldD = (oldCloudData.deploys && oldCloudData.deploys[i]) ? oldCloudData.deploys[i] : null;
+                if(!oldD) {
+                    logDetails.push(`• Deploy ${i+1}: Added New`);
+                } else {
+                    let changes = [];
+                    if(oldD.from !== d.from) changes.push(`From(${d.from})`);
+                    if(oldD.id !== d.id) changes.push(`ID(${d.id})`);
+                    if(oldD.batch !== d.batch) changes.push(`Batch(${d.batch})`);
+                    if(oldD.ips !== d.ips) changes.push(`IPs Updated`);
+                    if(changes.length > 0) logDetails.push(`• Deploy ${i+1}: ${changes.join(', ')}`);
+                }
             });
 
-            const summaryStr = changeSummary.length > 0 ? changeSummary.join(' | ') : "General Update";
+            const finalLog = logDetails.length > 0 ? logDetails.join('\n') : "General Update";
             const saveObj = { deploys, filter, limit, actions_list: actions, timestamp };
 
             document.getElementById('loadingOverlay').style.display = 'flex';
             await db.ref(`ems4/plans/${currentPlatform}/current`).set(saveObj);
-            await db.ref(`ems4/plans/${currentPlatform}/history`).push({ timestamp, changeSummary: summaryStr });
+            await db.ref(`ems4/plans/${currentPlatform}/history`).push({ timestamp, changeSummary: finalLog });
 
-            const viewerLink = `${currentUrl}?mode=view&plat=${currentPlatform}`;
+            const viewerLink = `${netlifyBase}/?mode=view&plat=${currentPlatform}`;
+            const telegramMsg = `🚀 <b>UPDATE [#${currentPlatform}]</b>\n━━━━━━━━━━━━━━━\n` +
+                                `🎯 <b>Filter:</b> ${filter || 'N/A'}\n` +
+                                `🕒 <b>Time:</b> ${timestamp}\n\n` +
+                                `📝 <b>Changes:</b>\n${finalLog}\n` +
+                                `━━━━━━━━━━━━━━━\n` +
+                                `🔗 <a href="${viewerLink}">CLICK HERE TO OPEN VIEW</a>`;
+
             await fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    chat_id: telegramChatId, 
-                    text: `🚀 *${currentPlatform} UPDATED*\n📝 *Log:* ${summaryStr.substring(0,100)}...\n🔗 [VIEW HERE](${viewerLink})`, 
-                    parse_mode: 'Markdown' 
-                })
+                body: JSON.stringify({ chat_id: telegramChatId, text: telegramMsg, parse_mode: 'HTML' })
             });
 
             alert("Saved!");
             location.reload();
         }
 
-        // Standard helpers
         function generateDeploys(savedData = null) {
             const num = parseInt(document.getElementById('deployCount').value) || 0;
             const container = document.getElementById('deploysContainer');
@@ -301,7 +312,7 @@
                 const d = (savedData && savedData[i]) ? savedData[i] : { from: '', id: '', batch: '10/3000P', rules: 'SELECT ALL IPS', ips: '' };
                 container.innerHTML += `
                     <div class="deploy-card bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
-                        <div class="text-[10px] font-black mb-2 uppercase">Deploy ${i+1}</div>
+                        <div class="text-[10px] font-black mb-2 uppercase text-slate-400">Deploy ${i+1}</div>
                         <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2">
                             <input type="text" oninput="checkIfChanged()" class="from-val p-2 border rounded text-xs" value="${d.from}" placeholder="FROM">
                             <input type="text" oninput="checkIfChanged()" class="id-val p-2 border rounded text-xs font-black text-blue-600" value="${d.id}" placeholder="ID">
@@ -309,9 +320,7 @@
                                 <option ${d.batch == '10/3000P' ? 'selected' : ''}>10/3000P</option>
                                 <option ${d.batch == '5/3000P' ? 'selected' : ''}>5/3000P</option>
                             </select>
-                            <select onchange="checkIfChanged()" class="rules-val p-2 border rounded text-xs">
-                                <option ${d.rules == 'SELECT ALL IPS' ? 'selected' : ''}>SELECT ALL IPS</option>
-                            </select>
+                            <select onchange="checkIfChanged()" class="rules-val p-2 border rounded text-xs"><option>SELECT ALL IPS</option></select>
                         </div>
                         <textarea oninput="checkIfChanged()" class="ips-val w-full p-2 border rounded text-[10px] font-mono bg-slate-50" rows="1" placeholder="IPs">${d.ips}</textarea>
                     </div>`;
@@ -333,7 +342,7 @@
             document.getElementById('actionModal').classList.remove('hidden');
         }
         function closeModal() { document.getElementById('actionModal').classList.add('hidden'); }
-        function updateLimitUI() { boitesTotal = parseInt(document.getElementById('globalLimit').value); generateDeploys(null); }
+        function updateLimitUI() { generateDeploys(null); }
     </script>
 </body>
 </html>
