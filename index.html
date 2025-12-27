@@ -11,7 +11,8 @@
         .plat-btn.active { border-color: #2563eb; background-color: #eff6ff; color: #2563eb; ring: 4px; ring-color: #eff6ff; }
         #loadingOverlay, #loginOverlay { background: rgba(255,255,255,0.95); position: fixed; inset: 0; z-index: 200; align-items: center; justify-content: center; display: flex; }
         #loadingOverlay { display: none; z-index: 210; }
-        .viewer-mode .admin-only, .viewer-mode .super-only, .viewer-mode .platform-selector { display: none !important; }
+        /* Hiding specific sections for viewer mode */
+        .viewer-mode .admin-only, .viewer-mode .super-only, .viewer-mode .platform-selector, .viewer-mode #statsSection { display: none !important; }
         #saveBtn:disabled, #updateStatsBtn:disabled { background-color: #cbd5e1; cursor: not-allowed; opacity: 0.7; }
         .readonly-stat { pointer-events: none !important; background-color: transparent; }
         .viewer-mode input, .viewer-mode select, .viewer-mode textarea { pointer-events: none !important; background-color: #f8fafc; border:none; }
@@ -204,7 +205,12 @@
             
             document.getElementById('platIndicator').innerText = `Editing: ${p}`;
             document.getElementById('mainSection').classList.remove('hidden');
-            document.getElementById('statsSection').classList.remove('hidden');
+            
+            // Stats section logic
+            if (userRole !== 'viewer') {
+                document.getElementById('statsSection').classList.remove('hidden');
+            }
+            
             document.getElementById('limitContainer').classList.remove('hidden');
             document.getElementById('prodContainer').classList.remove('hidden');
 
@@ -255,8 +261,14 @@
             const oldDeploys = oldCloudData.deploys || [];
             curDeploys.forEach((d, i) => {
                 const old = oldDeploys[i] || {};
-                if(d.from !== old.from || d.id !== old.id || d.ips !== old.ips || d.batch !== old.batch || d.rules !== old.rules) {
-                    diffs.push(`Deploy ${d.idx}: Updated`);
+                let dChanges = [];
+                if (d.ips !== old.ips) dChanges.push("ips updated");
+                if (d.batch !== old.batch) dChanges.push(`batch: ${d.batch}`);
+                if (d.rules !== old.rules) dChanges.push(`rules: ${d.rules}`);
+                if (d.from !== old.from || d.id !== old.id) dChanges.push("IDs updated");
+                
+                if (dChanges.length > 0) {
+                    diffs.push(`Deploy ${d.idx}: ${dChanges.join(' | ')}`);
                 }
             });
 
@@ -296,7 +308,6 @@
             document.getElementById('loadingOverlay').style.display = 'flex';
             await db.ref(`ems4/plans/${currentPlatform}/current`).set(saveObj);
 
-            // Telegram Message (Cleaned up as per request)
             const telegramMsg = `🚀 <b>MODIF: ${currentPlatform}</b>\n` +
                                 `━━━━━━━━━━━━━━━\n` +
                                 `📝 <b>CHANGES:</b>\n` +
