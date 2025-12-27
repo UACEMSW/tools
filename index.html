@@ -11,8 +11,13 @@
         .plat-btn.active { border-color: #2563eb; background-color: #eff6ff; color: #2563eb; ring: 4px; ring-color: #eff6ff; }
         #loadingOverlay, #loginOverlay { background: rgba(255,255,255,0.95); position: fixed; inset: 0; z-index: 200; align-items: center; justify-content: center; display: flex; }
         #loadingOverlay { display: none; z-index: 210; }
+        
         /* Hiding specific sections for viewer mode */
-        .viewer-mode .admin-only, .viewer-mode .super-only, .viewer-mode .platform-selector, .viewer-mode #statsSection { display: none !important; }
+        .viewer-mode .admin-only, 
+        .viewer-mode .super-only, 
+        .viewer-mode .platform-selector, 
+        .viewer-mode #statsSection { display: none !important; }
+        
         #saveBtn:disabled, #updateStatsBtn:disabled { background-color: #cbd5e1; cursor: not-allowed; opacity: 0.7; }
         .readonly-stat { pointer-events: none !important; background-color: transparent; }
         .viewer-mode input, .viewer-mode select, .viewer-mode textarea { pointer-events: none !important; background-color: #f8fafc; border:none; }
@@ -206,9 +211,12 @@
             document.getElementById('platIndicator').innerText = `Editing: ${p}`;
             document.getElementById('mainSection').classList.remove('hidden');
             
-            // Stats section logic
-            if (userRole !== 'viewer') {
-                document.getElementById('statsSection').classList.remove('hidden');
+            // Logic to show/hide Stats Section based on role
+            const statsSec = document.getElementById('statsSection');
+            if (userRole === 'viewer') {
+                statsSec.classList.add('hidden'); // Ensure it's hidden for viewers
+            } else {
+                statsSec.classList.remove('hidden'); // Show for Admin/Super
             }
             
             document.getElementById('limitContainer').classList.remove('hidden');
