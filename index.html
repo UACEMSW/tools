@@ -13,10 +13,9 @@
         #loadingOverlay { display: none; z-index: 210; }
         .viewer-mode .admin-only, .viewer-mode .super-only { display: none !important; }
         #saveBtn:disabled, #updateStatsBtn:disabled { background-color: #cbd5e1; cursor: not-allowed; opacity: 0.7; }
+        /* Read-only styles for non-super users on stats */
+        .readonly-stat { pointer-events: none !important; background-color: transparent; }
         .viewer-mode input:not(.prod-input), .viewer-mode select, .viewer-mode textarea { pointer-events: none !important; background-color: #f8fafc; }
-        .viewer-mode .prod-input { pointer-events: none !important; }
-        /* Style for Rotation group */
-        .stat-card { background: white; padding: 0.75rem; border-radius: 1rem; border: 1px solid #e2e8f0; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
     </style>
 </head>
 <body class="bg-slate-100 p-4 md:p-8 font-sans text-slate-900">
@@ -33,6 +32,7 @@
 
     <div id="appContent" class="hidden max-w-5xl mx-auto">
         <header class="bg-white p-6 rounded-2xl shadow-sm border-b-4 border-blue-600 mb-4 flex flex-col md:flex-row justify-between items-center gap-4">
+            
             <div class="flex items-center gap-3 w-full md:w-auto">
                 <h1 class="text-2xl font-black italic uppercase tracking-tighter whitespace-nowrap">EMS4 PLAN</h1>
                 <div id="prodContainer" class="hidden flex items-center bg-yellow-100 border border-yellow-200 px-3 py-1 rounded-lg">
@@ -56,24 +56,24 @@
 
         <div id="statsSection" class="hidden mb-6">
             <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div class="stat-card">
+                <div class="bg-white p-3 rounded-2xl shadow-sm border border-slate-200">
                     <label class="block text-[9px] font-black text-slate-400 uppercase">Total Seeds</label>
-                    <input type="text" id="statTotalSeeds" oninput="checkStatsChange()" class="w-full bg-transparent font-black text-blue-600 text-lg outline-none" value="0">
+                    <input type="text" id="statTotalSeeds" oninput="checkStatsChange()" class="stat-input w-full bg-transparent font-black text-blue-600 text-lg outline-none" value="0">
                 </div>
-                <div class="stat-card">
+                <div class="bg-white p-3 rounded-2xl shadow-sm border border-slate-200">
                     <label class="block text-[9px] font-black text-slate-400 uppercase">RDPs</label>
-                    <input type="text" id="statRDPs" oninput="checkStatsChange()" class="w-full bg-transparent font-black text-slate-700 text-lg outline-none" value="0">
+                    <input type="text" id="statRDPs" oninput="checkStatsChange()" class="stat-input w-full bg-transparent font-black text-slate-700 text-lg outline-none" value="0">
                 </div>
-                <div class="stat-card">
+                <div class="bg-white p-3 rounded-2xl shadow-sm border border-slate-200">
                     <label class="block text-[9px] font-black text-slate-400 uppercase">Sessions</label>
-                    <input type="text" id="statSessions" oninput="checkStatsChange()" class="w-full bg-transparent font-black text-slate-700 text-lg outline-none" value="0">
+                    <input type="text" id="statSessions" oninput="checkStatsChange()" class="stat-input w-full bg-transparent font-black text-slate-700 text-lg outline-none" value="0">
                 </div>
-                <div class="stat-card border-purple-200 bg-purple-50/30">
-                    <label class="block text-[9px] font-black text-purple-400 uppercase text-center mb-1">Rotation (Min ➜ Max)</label>
-                    <div class="flex items-center justify-center gap-1">
-                        <input type="number" id="rotMin" oninput="checkStatsChange()" class="w-12 bg-transparent font-black text-purple-700 text-center outline-none" placeholder="0">
-                        <span class="text-purple-300 font-bold">-</span>
-                        <input type="number" id="rotMax" oninput="checkStatsChange()" class="w-12 bg-transparent font-black text-purple-700 text-center outline-none" placeholder="0">
+                <div class="bg-purple-50 p-3 rounded-2xl shadow-sm border border-purple-100 text-center">
+                    <label class="block text-[9px] font-black text-purple-400 uppercase mb-1">Rotation (Min-Max)</label>
+                    <div class="flex justify-center items-center gap-1 font-black text-purple-700">
+                        <input type="number" id="rotMin" oninput="checkStatsChange()" class="stat-input w-10 bg-transparent text-center outline-none" value="0">
+                        <span>-</span>
+                        <input type="number" id="rotMax" oninput="checkStatsChange()" class="stat-input w-10 bg-transparent text-center outline-none" value="0">
                     </div>
                 </div>
             </div>
@@ -162,11 +162,11 @@
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.get('mode') === 'view') {
                 userRole = "viewer"; document.body.classList.add('viewer-mode'); startApp();
-                selectPlatform(urlParams.get('plat') || 'WEB');
+                if(urlParams.get('plat')) selectPlatform(urlParams.get('plat'));
             } else if (savedKey === SUPER_KEY) {
-                userRole = "super"; document.body.classList.add('super-mode'); startApp();
+                userRole = "super"; startApp();
             } else if (savedKey === ADMIN_KEY) {
-                userRole = "admin"; document.body.classList.add('admin-mode'); startApp();
+                userRole = "admin"; startApp();
             } else { document.getElementById('loginOverlay').style.display = 'flex'; }
         };
 
@@ -183,15 +183,18 @@
             document.getElementById('appContent').classList.remove('hidden');
             const badge = document.getElementById('roleBadge');
             const label = document.getElementById('roleLabel');
+            
             if(userRole === 'super') {
                 label.innerText = "ROLE: SUPER ADMIN"; badge.innerText = "SUPER"; badge.className = "bg-purple-600 text-white px-2 py-0.5 rounded text-[8px] font-black";
                 document.getElementById('updateStatsBtn').classList.remove('hidden');
             } else {
-                // ADMIN OR VIEWER: Lock Stats
                 label.innerText = userRole === 'admin' ? "ROLE: ADMIN" : "ROLE: VIEWER"; 
                 badge.innerText = userRole.toUpperCase(); badge.className = "bg-slate-600 text-white px-2 py-0.5 rounded text-[8px] font-black";
-                const fields = ['statTotalSeeds', 'statRDPs', 'statSessions', 'rotMin', 'rotMax'];
-                fields.forEach(f => { document.getElementById(f).readOnly = true; document.getElementById(f).classList.add('pointer-events-none'); });
+                // Lock stats for admins and viewers
+                document.querySelectorAll('.stat-input').forEach(el => {
+                    el.readOnly = true;
+                    el.classList.add('readonly-stat');
+                });
             }
         }
 
@@ -207,14 +210,14 @@
             document.getElementById('prodContainer').classList.remove('hidden');
 
             const snap = await db.ref(`ems4/plans/${p}/current`).once('value');
-            oldCloudData = snap.val() || { limit: 100, prodType: "", filter: "", deploys: [], actions_list: [], stats: {seeds: '0', rdps: '0', sessions: '0', rotMin: '0', rotMax: '0'} };
+            oldCloudData = snap.val() || { limit: 100, prodType: "", filter: "", deploys: [], actions_list: [], stats: {seeds: '0', rdps: '0', sessions: '0', rotMin: 0, rotMax: 0} };
 
             document.getElementById('prodType').value = oldCloudData.prodType || "";
             document.getElementById('statTotalSeeds').value = oldCloudData.stats?.seeds || '0';
             document.getElementById('statRDPs').value = oldCloudData.stats?.rdps || '0';
             document.getElementById('statSessions').value = oldCloudData.stats?.sessions || '0';
-            document.getElementById('rotMin').value = oldCloudData.stats?.rotMin || '0';
-            document.getElementById('rotMax').value = oldCloudData.stats?.rotMax || '0';
+            document.getElementById('rotMin').value = oldCloudData.stats?.rotMin || 0;
+            document.getElementById('rotMax').value = oldCloudData.stats?.rotMax || 0;
 
             document.getElementById('spam-actions-container').innerHTML = '';
             document.getElementById('inbox-actions-container').innerHTML = '';
@@ -231,40 +234,14 @@
             document.getElementById('loadingOverlay').style.display = 'none';
         }
 
-        function checkStatsChange() {
-            if (!oldCloudData || userRole !== 'super') return;
-            const s = oldCloudData.stats || {};
-            const changed = document.getElementById('statTotalSeeds').value !== (s.seeds || '0') ||
-                            document.getElementById('statRDPs').value !== (s.rdps || '0') ||
-                            document.getElementById('statSessions').value !== (s.sessions || '0') ||
-                            document.getElementById('rotMin').value !== (s.rotMin || '0') ||
-                            document.getElementById('rotMax').value !== (s.rotMax || '0');
-            document.getElementById('updateStatsBtn').disabled = !changed;
-        }
-
-        async function saveStatsOnly() {
-            const stats = {
-                seeds: document.getElementById('statTotalSeeds').value,
-                rdps: document.getElementById('statRDPs').value,
-                sessions: document.getElementById('statSessions').value,
-                rotMin: document.getElementById('rotMin').value,
-                rotMax: document.getElementById('rotMax').value
-            };
-            document.getElementById('loadingOverlay').style.display = 'flex';
-            await db.ref(`ems4/plans/${currentPlatform}/current/stats`).set(stats);
-            oldCloudData.stats = stats;
-            document.getElementById('updateStatsBtn').disabled = true;
-            document.getElementById('loadingOverlay').style.display = 'none';
-        }
-
-        // --- Rest of functions from previous version ---
         function getChanges() {
             let diffs = [];
             const curLimit = parseInt(document.getElementById('globalLimit').value);
             const curFilter = document.getElementById('filterKeyword').value;
             const curProd = document.getElementById('prodType').value;
-            if (curProd !== (oldCloudData.prodType || "")) diffs.push(`PROD: ${oldCloudData.prodType || 'None'} ➝ ${curProd}`);
-            if (curLimit !== (oldCloudData.limit || 100)) diffs.push(`Limit: ${oldCloudData.limit || 100} ➝ ${curLimit}`);
+            
+            if (curProd !== (oldCloudData.prodType || "")) diffs.push(`PROD: ${oldCloudData.prodType || 'None'} ➜ ${curProd}`);
+            if (curLimit !== (oldCloudData.limit || 100)) diffs.push(`Limit: ${oldCloudData.limit || 100} ➜ ${curLimit}`);
             if (curFilter !== (oldCloudData.filter || "")) diffs.push(`Filter: ${curFilter || 'None'}`);
 
             const curActions = Array.from(document.querySelectorAll('.action-chip')).map(el => ({
@@ -274,39 +251,49 @@
             const oldActions = oldCloudData.actions_list || [];
             curActions.forEach(newA => {
                 const oldA = oldActions.find(o => o.name === newA.n && o.type === newA.t);
-                if(!oldA) diffs.push(`Action ${newA.n}: Added`);
-                else if (oldA.value !== newA.v) diffs.push(`Action ${newA.n}: ${oldA.value} ➝ ${newA.v}`);
-            });
-            oldActions.forEach(oldA => {
-                if(!curActions.find(n => n.n === oldA.name && n.t === oldA.type)) diffs.push(`Action ${oldA.name}: Removed`);
+                if(!oldA) diffs.push(`Added ${newA.n}`);
+                else if (oldA.value !== newA.v) diffs.push(`${newA.n}: ${oldA.value} ➜ ${newA.v}`);
             });
 
             const deployCards = document.querySelectorAll('.deploy-card');
             deployCards.forEach((c, i) => {
                 const oldD = oldCloudData.deploys?.[i] || {};
                 const id = c.querySelector('.id-val').value.trim();
-                const from = c.querySelector('.from-val').value.trim();
-                const ips = c.querySelector('.ips-val').value.trim();
-                const batch = c.querySelector('.batch-val').value;
-                const rules = c.querySelector('.rules-val').value;
-                if (id !== (oldD.id || "")) diffs.push(`Deploy ${i+1} ID: ${oldD.id || '?'} ➝ ${id}`);
-                if (from !== (oldD.from || "")) diffs.push(`Deploy ${i+1} From: ${oldD.from || '?'} ➝ ${from}`);
-                if (batch !== (oldD.batch || "10/3000P")) diffs.push(`Deploy ${i+1} Batch: ${oldD.batch} ➝ ${batch}`);
-                if (rules !== (oldD.rules || "SELECT ALL IPS")) diffs.push(`Deploy ${i+1} Rules: ${oldD.rules || 'ALL'} ➝ ${rules}`);
-                if (ips !== (oldD.ips || "")) diffs.push(`Deploy ${i+1}: IPs Updated`);
+                if (id !== (oldD.id || "")) diffs.push(`Deploy ${i+1} ID Updated`);
             });
-            if(deployCards.length !== (oldCloudData.deploys?.length || 0)) diffs.push(`Deploys Count: ${oldCloudData.deploys?.length} ➝ ${deployCards.length}`);
             return diffs;
         }
 
-        function compareData() {
-            if (!oldCloudData) return;
-            const changes = getChanges();
-            document.getElementById('saveBtn').disabled = (changes.length === 0);
+        function checkStatsChange() {
+            if (!oldCloudData || userRole !== 'super') return;
+            const s = oldCloudData.stats || {};
+            const changed = document.getElementById('statTotalSeeds').value !== (s.seeds || '0') ||
+                            document.getElementById('statRDPs').value !== (s.rdps || '0') ||
+                            document.getElementById('statSessions').value !== (s.sessions || '0') ||
+                            parseInt(document.getElementById('rotMin').value) !== (s.rotMin || 0) ||
+                            parseInt(document.getElementById('rotMax').value) !== (s.rotMax || 0);
+            document.getElementById('updateStatsBtn').disabled = !changed;
+        }
+
+        async function saveStatsOnly() {
+            const stats = {
+                seeds: document.getElementById('statTotalSeeds').value,
+                rdps: document.getElementById('statRDPs').value,
+                sessions: document.getElementById('statSessions').value,
+                rotMin: parseInt(document.getElementById('rotMin').value),
+                rotMax: parseInt(document.getElementById('rotMax').value)
+            };
+            document.getElementById('loadingOverlay').style.display = 'flex';
+            await db.ref(`ems4/plans/${currentPlatform}/current/stats`).set(stats);
+            oldCloudData.stats = stats;
+            document.getElementById('updateStatsBtn').disabled = true;
+            document.getElementById('loadingOverlay').style.display = 'none';
         }
 
         async function processSave() {
-            const diffs = getChanges(); if(diffs.length === 0) return;
+            const diffs = getChanges();
+            if(diffs.length === 0) return;
+
             const limit = parseInt(document.getElementById('globalLimit').value);
             const filter = document.getElementById('filterKeyword').value;
             const prodType = document.getElementById('prodType').value;
@@ -322,17 +309,26 @@
             const saveObj = { ...oldCloudData, deploys, filter, limit, prodType, actions_list: actions, timestamp: new Date().toLocaleString() };
             document.getElementById('loadingOverlay').style.display = 'flex';
             await db.ref(`ems4/plans/${currentPlatform}/current`).set(saveObj);
-            const telegramMsg = `🚀 <b>MODIFICATION [#${currentPlatform}]</b>\n` +
+
+            // Telegram Notification: Platform focused
+            const telegramMsg = `🚀 <b>PLAN UPDATED: ${currentPlatform}</b>\n` +
                                 `━━━━━━━━━━━━━━━\n` +
                                 `📝 <b>Changes:</b>\n${diffs.map(d => '• ' + d).join('\n')}\n` +
-                                `━━━━━━━━━━━━━━━\n🔗 <a href="${netlifyBase}/?mode=view&plat=${currentPlatform}">VIEW PLAN</a>`;
+                                `━━━━━━━━━━━━━━━\n` +
+                                `🔗 <a href="${netlifyBase}/?mode=view&plat=${currentPlatform}">VIEW MODIFICATIONS</a>`;
+
             await fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ chat_id: telegramChatId, text: telegramMsg, parse_mode: 'HTML' })
+                body: JSON.stringify({ chat_id: telegramChatId, text: telegramMsg, parse_mode: 'HTML', disable_web_page_preview: true })
             });
+
             location.reload();
         }
 
+        // --- UI HELPERS ---
+        function compareData() { if (oldCloudData) document.getElementById('saveBtn').disabled = (getChanges().length === 0); }
+        function changePlat(p) { selectPlatform(p); }
+        
         function generateDeploys(savedData = null) {
             const num = parseInt(document.getElementById('deployCount').value) || 0;
             const container = document.getElementById('deploysContainer');
@@ -390,7 +386,7 @@
                 document.getElementById(`${type}-calculated-total`).innerText = sum;
             });
         }
-        function changePlat(p) { selectPlatform(p); }
+
         function showActionMenu(type) {
             const list = document.getElementById('modalList'); list.innerHTML = "";
             const opts = type === 'spam' ? ["NOT SPAM", "REPLY", "CLICK", "MOVE"] : ["READ", "ARCHIVE", "STAR"];
