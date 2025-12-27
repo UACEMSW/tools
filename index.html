@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>EMS4 | Smart Cloud Sync</title>
+    <title>EMS4 | View Mode</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
@@ -17,6 +17,7 @@
         
         /* Viewer Protection */
         .viewer-mode .admin-only { display: none !important; }
+        .viewer-mode .platform-selector { display: none !important; } /* Hidden for viewers */
         .viewer-mode input, .viewer-mode select, .viewer-mode textarea { pointer-events: none !important; background-color: #f8fafc; border-color: #e2e8f0; }
     </style>
 </head>
@@ -55,7 +56,7 @@
             </div>
         </header>
 
-        <div class="grid grid-cols-3 gap-4 mb-6">
+        <div class="platform-selector grid grid-cols-3 gap-4 mb-6">
             <button onclick="changePlat('WEB', 100)" id="btn-WEB" class="plat-btn bg-white p-4 rounded-xl shadow-sm border-2 border-transparent font-black transition-all text-slate-600 uppercase italic">Web (<span id="span-WEB">100</span>)</button>
             <button onclick="changePlat('SELENIUM', 75)" id="btn-SELENIUM" class="plat-btn bg-white p-4 rounded-xl shadow-sm border-2 border-transparent font-black transition-all text-slate-600 uppercase italic">Selenium (<span id="span-SELENIUM">75</span>)</button>
             <button onclick="changePlat('AUTOMAT', 20)" id="btn-AUTOMAT" class="plat-btn bg-white p-4 rounded-xl shadow-sm border-2 border-transparent font-black transition-all text-slate-600 uppercase italic">Automat (<span id="span-AUTOMAT">20</span>)</button>
@@ -120,8 +121,7 @@
     </div>
 
     <script>
-        // --- CONFIG & SECURITY ---
-        const ADMIN_KEY = "admin75"; // Password for modifiers
+        const ADMIN_KEY = "admin75"; 
         const firebaseConfig = {
           apiKey: "AIzaSyAFR96bibEGLaMroqFZCLcSHyCoAdewz78",
           authDomain: "ems4-reporting.firebaseapp.com",
@@ -140,20 +140,21 @@
 
         let userRole = "viewer";
 
-        // --- ACCESS LOGIC ---
         window.onload = function() {
             const urlParams = new URLSearchParams(window.location.search);
             const mode = urlParams.get('mode');
             const platformFromUrl = urlParams.get('plat');
 
             if (mode === 'view') {
-                // AUTO VIEWER ACCESS
                 userRole = "viewer";
                 document.body.classList.add('viewer-mode');
                 startApp();
-                if(platformFromUrl) selectPlatform(platformFromUrl, 100);
+                // Direct load the platform from URL
+                if(platformFromUrl) {
+                    const counts = { 'WEB': 100, 'SELENIUM': 75, 'AUTOMAT': 20 };
+                    selectPlatform(platformFromUrl, counts[platformFromUrl] || 100);
+                }
             } else {
-                // ASK FOR ADMIN KEY
                 document.getElementById('loginOverlay').style.display = 'flex';
             }
         };
@@ -176,7 +177,7 @@
             badge.className = userRole === 'admin' ? "bg-red-600 text-white px-2 py-0.5 rounded text-[8px] font-black uppercase mb-1" : "bg-blue-600 text-white px-2 py-0.5 rounded text-[8px] font-black uppercase mb-1";
         }
 
-        // --- APP FUNCTIONS ---
+        // Logic for platform switching
         const ACTION_OPTIONS = {
             spam: ["REPORT NOT SPAM", "SHOW IMAGE", "REPLY", "CLICK", "FORWARD", "MOVE TO INBOX", "SELECT ALL REPORT NOT SPAM", "MARK AS IMPORTANT", "STARRED"],
             inbox: ["READ", "SHOW IMAGE", "REPLY", "CLICK", "FORWARD", "REPORT SPAM", "ARCHIVE", "MOVE TO FOLDER", "MARK AS IMPORTANT", "STARRED"]
@@ -266,7 +267,7 @@
             document.getElementById('activePlatDisplay').innerText = "PLATFORM: " + p;
             
             document.querySelectorAll('.plat-btn').forEach(b => b.classList.remove('active', 'border-blue-600', 'text-blue-600'));
-            document.getElementById('btn-'+p).classList.add('active', 'border-blue-600', 'text-blue-600');
+            if(document.getElementById('btn-'+p)) document.getElementById('btn-'+p).classList.add('active', 'border-blue-600', 'text-blue-600');
             document.getElementById('mainSection').classList.remove('hidden');
 
             db.ref('ems4/plans/' + currentPlatform + '/current').once('value', (snapshot) => {
@@ -369,9 +370,9 @@
                 const saveObj = { deploys: newData, filter: currentFilter, limit, actions_list, timestamp };
                 await db.ref('ems4/plans/' + currentPlatform + '/current').set(saveObj);
 
-                // TELEGRAM LINK WITH MODE=VIEW
+                // IMPORTANT: Link with platform parameter
                 const viewerLink = `${currentUrl}?mode=view&plat=${currentPlatform}`;
-                const botMsg = `🚀 *UPDATE [#${currentPlatform}]*\n━━━━━━━━━━━━━━━\n🎯 *Filter:* ${currentFilter}\n🕒 *Time:* ${timestamp}\n🌱 *Seeds/Hr:* ${limit}\n━━━━━━━━━━━━━━━\n🔗 [OPEN VIEW](${viewerLink})`;
+                const botMsg = `🚀 *UPDATE [#${currentPlatform}]*\n━━━━━━━━━━━━━━━\n🎯 *Filter:* ${currentFilter}\n🕒 *Time:* ${timestamp}\n🌱 *Seeds/Hr:* ${limit}\n━━━━━━━━━━━━━━━\n🔗 [OPEN ${currentPlatform} VIEW](${viewerLink})`;
 
                 await fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, {
                     method: 'POST',
