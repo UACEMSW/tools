@@ -13,7 +13,7 @@
         #loadingOverlay, #loginOverlay { background: rgba(255,255,255,0.95); position: fixed; inset: 0; z-index: 200; align-items: center; justify-content: center; display: flex; }
         #loadingOverlay { display: none; z-index: 210; }
         
-        /* VIEWER MODE (BOT LINK) */
+        /* --- VIEWER MODE (BOT) --- */
         .viewer-mode .admin-only, 
         .viewer-mode .super-only, 
         .viewer-mode #statsSection, 
@@ -22,7 +22,7 @@
         .viewer-mode #roleBadge,
         .viewer-mode .viewer-hidden { display: none !important; }
 
-        /* ADMIN MODE */
+        /* --- ADMIN MODE --- */
         .admin-mode .super-only { display: none !important; }
         .admin-mode #rotationEditArea { display: none !important; }
 
@@ -58,65 +58,51 @@
             </div>
         </header>
 
-        <div class="platform-selector grid grid-cols-3 gap-4 mb-6">
-            <button onclick="changePlat('WEB')" id="btn-WEB" class="plat-btn bg-white p-4 rounded-xl shadow-sm border-2 border-transparent font-black text-slate-600 uppercase italic">Web</button>
-            <button onclick="changePlat('SELENIUM')" id="btn-SELENIUM" class="plat-btn bg-white p-4 rounded-xl shadow-sm border-2 border-transparent font-black text-slate-600 uppercase italic">Selenium</button>
-            <button onclick="changePlat('AUTOMAT')" id="btn-AUTOMAT" class="plat-btn bg-white p-4 rounded-xl shadow-sm border-2 border-transparent font-black text-slate-600 uppercase italic">Automat</button>
+        <div class="platform-selector grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div class="relative group">
+                <button onclick="changePlat('WEB')" id="btn-WEB" class="plat-btn w-full bg-white p-5 rounded-2xl shadow-sm border-2 border-transparent font-black text-slate-600 uppercase italic flex flex-col items-center">
+                    <span>Web</span>
+                    <span class="text-[10px] text-blue-500 not-italic mt-1" id="label-WEB">Total: 100</span>
+                </button>
+                <input type="number" id="input-WEB" onchange="updateBoitesConfig('WEB', this.value)" class="super-only absolute top-2 right-2 w-12 text-center text-[10px] border rounded bg-blue-50 font-bold" value="100">
+            </div>
+            <div class="relative group">
+                <button onclick="changePlat('SELENIUM')" id="btn-SELENIUM" class="plat-btn w-full bg-white p-5 rounded-2xl shadow-sm border-2 border-transparent font-black text-slate-600 uppercase italic flex flex-col items-center">
+                    <span>Selenium</span>
+                    <span class="text-[10px] text-blue-500 not-italic mt-1" id="label-SELENIUM">Total: 75</span>
+                </button>
+                <input type="number" id="input-SELENIUM" onchange="updateBoitesConfig('SELENIUM', this.value)" class="super-only absolute top-2 right-2 w-12 text-center text-[10px] border rounded bg-blue-50 font-bold" value="75">
+            </div>
+            <div class="relative group">
+                <button onclick="changePlat('AUTOMAT')" id="btn-AUTOMAT" class="plat-btn w-full bg-white p-5 rounded-2xl shadow-sm border-2 border-transparent font-black text-slate-600 uppercase italic flex flex-col items-center">
+                    <span>Automat</span>
+                    <span class="text-[10px] text-blue-500 not-italic mt-1" id="label-AUTOMAT">Total: 20</span>
+                </button>
+                <input type="number" id="input-AUTOMAT" onchange="updateBoitesConfig('AUTOMAT', this.value)" class="super-only absolute top-2 right-2 w-12 text-center text-[10px] border rounded bg-blue-50 font-bold" value="20">
+            </div>
         </div>
 
         <div id="platformContent" class="hidden space-y-6">
             
             <div id="statsSection" class="w-full">
                 <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
-                    <div class="bg-blue-50 p-3 rounded-2xl shadow-sm border border-blue-200">
-                        <label class="block text-[9px] font-black text-blue-500 uppercase">Seeds</label>
-                        <input type="text" id="statTotalSeeds" oninput="checkStatsChange()" class="stat-input w-full bg-transparent font-black text-blue-700 text-lg outline-none" value="0">
-                    </div>
-                    <div class="bg-blue-50 p-3 rounded-2xl shadow-sm border border-blue-200">
-                        <label class="block text-[9px] font-black text-blue-500 uppercase">RDPs</label>
-                        <input type="text" id="statRDPs" oninput="checkStatsChange()" class="stat-input w-full bg-transparent font-black text-blue-700 text-lg outline-none" value="0">
-                    </div>
-                    <div class="bg-blue-50 p-3 rounded-2xl shadow-sm border border-blue-200">
-                        <label class="block text-[9px] font-black text-blue-500 uppercase">Sessions</label>
-                        <input type="text" id="statSessions" oninput="checkStatsChange()" class="stat-input w-full bg-transparent font-black text-blue-700 text-lg outline-none" value="0">
-                    </div>
-                    
+                    <div class="bg-blue-50 p-3 rounded-2xl shadow-sm border border-blue-200"><label class="block text-[9px] font-black text-blue-500 uppercase">Seeds</label><input type="text" id="statTotalSeeds" oninput="checkStatsChange()" class="stat-input w-full bg-transparent font-black text-blue-700 text-lg outline-none" value="0"></div>
+                    <div class="bg-blue-50 p-3 rounded-2xl shadow-sm border border-blue-200"><label class="block text-[9px] font-black text-blue-500 uppercase">RDPs</label><input type="text" id="statRDPs" oninput="checkStatsChange()" class="stat-input w-full bg-transparent font-black text-blue-700 text-lg outline-none" value="0"></div>
+                    <div class="bg-blue-50 p-3 rounded-2xl shadow-sm border border-blue-200"><label class="block text-[9px] font-black text-blue-500 uppercase">Sessions</label><input type="text" id="statSessions" oninput="checkStatsChange()" class="stat-input w-full bg-transparent font-black text-blue-700 text-lg outline-none" value="0"></div>
                     <div class="bg-blue-50 p-3 rounded-2xl shadow-sm border border-blue-200 text-center relative">
                         <label class="block text-[9px] font-black text-blue-500 uppercase mb-1">Rotation</label>
-                        <div class="flex justify-center items-center gap-1 font-black text-blue-700">
-                            <input type="number" id="rotMin" oninput="checkStatsChange()" class="stat-input w-10 bg-transparent text-center outline-none" value="0">
-                            <span>-</span>
-                            <input type="number" id="rotMax" oninput="checkStatsChange()" class="stat-input w-10 bg-transparent text-center outline-none" value="0">
-                        </div>
+                        <div class="flex justify-center items-center gap-1 font-black text-blue-700"><input type="number" id="rotMin" oninput="checkStatsChange()" class="stat-input w-10 bg-transparent text-center outline-none" value="0"><span>-</span><input type="number" id="rotMax" oninput="checkStatsChange()" class="stat-input w-10 bg-transparent text-center outline-none" value="0"></div>
                         <button onclick="toggleRotationDetails()" class="mt-1 text-[8px] bg-blue-600 text-white px-2 py-0.5 rounded font-black uppercase">Détail</button>
                     </div>
-
-                    <div class="bg-emerald-50 p-3 rounded-2xl shadow-sm border border-emerald-100 text-center">
-                        <label class="text-[9px] font-black text-emerald-500 uppercase">Qualité</label>
-                        <input type="number" id="statQualityVal" oninput="checkStatsChange()" class="stat-input w-full bg-transparent font-black text-emerald-700 text-lg text-center outline-none" value="0">
-                    </div>
-
-                    <div class="bg-rose-50 p-3 rounded-2xl shadow-sm border border-rose-100 text-center">
-                        <label class="text-[9px] font-black text-rose-500 uppercase">Paused</label>
-                        <input type="number" id="statPausedVal" oninput="checkStatsChange()" class="stat-input w-full bg-transparent font-black text-rose-700 text-lg text-center outline-none" value="0">
-                    </div>
-
-                    <div class="bg-orange-50 p-3 rounded-2xl shadow-sm border border-orange-100 text-center">
-                        <label class="block text-[9px] font-black text-orange-500 uppercase mb-1">Period End</label>
-                        <input type="text" id="statDateEnd" oninput="checkStatsChange()" class="stat-input bg-transparent text-[10px] font-bold text-orange-700 text-center outline-none" placeholder="End Date">
-                    </div>
+                    <div class="bg-emerald-50 p-3 rounded-2xl shadow-sm border border-emerald-100 text-center"><label class="text-[9px] font-black text-emerald-500 uppercase">Qualité</label><input type="number" id="statQualityVal" oninput="checkStatsChange()" class="stat-input w-full bg-transparent font-black text-emerald-700 text-lg text-center outline-none" value="0"></div>
+                    <div class="bg-rose-50 p-3 rounded-2xl shadow-sm border border-rose-100 text-center"><label class="text-[9px] font-black text-rose-500 uppercase">Paused</label><input type="number" id="statPausedVal" oninput="checkStatsChange()" class="stat-input w-full bg-transparent font-black text-rose-700 text-lg text-center outline-none" value="0"></div>
+                    <div class="bg-orange-50 p-3 rounded-2xl shadow-sm border border-orange-100 text-center"><label class="block text-[9px] font-black text-orange-500 uppercase mb-1">Period End</label><input type="text" id="statDateEnd" oninput="checkStatsChange()" class="stat-input bg-transparent text-[10px] font-bold text-orange-700 text-center outline-none" placeholder="End Date"></div>
                 </div>
-
                 <div id="rotationDetailsBox" class="hidden mt-2 p-4 bg-white border-2 border-blue-100 rounded-xl shadow-lg">
-                    <div id="rotationEditArea" class="mb-3">
-                        <textarea id="rotationRawData" oninput="checkStatsChange()" class="w-full p-3 border rounded-lg text-xs font-mono bg-slate-50 text-slate-700" rows="5"></textarea>
-                    </div>
+                    <div id="rotationEditArea" class="mb-3"><textarea id="rotationRawData" oninput="checkStatsChange()" class="w-full p-3 border rounded-lg text-xs font-mono bg-slate-50" rows="3"></textarea></div>
                     <div id="rotationStaticView" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2"></div>
                 </div>
-                
-                <button id="updateStatsBtn" onclick="saveStatsOnly()" class="super-only mt-2 w-full bg-slate-800 text-white py-3 rounded-xl text-[10px] font-black uppercase transition">
-                    Update Stats & Details
-                </button>
+                <button id="updateStatsBtn" onclick="saveStatsOnly()" class="super-only mt-2 w-full bg-slate-800 text-white py-3 rounded-xl text-[10px] font-black uppercase transition">Update Stats</button>
             </div>
 
             <div id="platIndicator" class="viewer-hidden text-center font-black text-blue-600 uppercase italic text-sm tracking-widest pt-4">---</div>
@@ -182,6 +168,7 @@
         let userRole = "viewer"; 
         let currentPlatform = "";
         let oldCloudData = null;
+        let boitesConfig = { WEB: 100, SELENIUM: 75, AUTOMAT: 20 };
 
         window.onload = function() {
             const savedKey = localStorage.getItem('ems4_key');
@@ -195,9 +182,28 @@
             } else if (savedKey === SUPER_KEY || savedKey === ADMIN_KEY) {
                 userRole = (savedKey === SUPER_KEY) ? "super" : "admin";
                 if(userRole === 'admin') document.body.classList.add('admin-mode');
+                loadBoitesConfig();
                 startApp();
             } else { document.getElementById('loginOverlay').style.display = 'flex'; }
         };
+
+        async function loadBoitesConfig() {
+            const snap = await db.ref('ems4/config/boites').once('value');
+            if(snap.exists()) {
+                boitesConfig = snap.val();
+                ['WEB','SELENIUM','AUTOMAT'].forEach(p => {
+                    document.getElementById(`input-${p}`).value = boitesConfig[p];
+                    document.getElementById(`label-${p}`).innerText = `Total: ${boitesConfig[p]}`;
+                });
+            }
+        }
+
+        async function updateBoitesConfig(p, val) {
+            boitesConfig[p] = parseInt(val) || 0;
+            document.getElementById(`label-${p}`).innerText = `Total: ${boitesConfig[p]}`;
+            await db.ref('ems4/config/boites').set(boitesConfig);
+            if(currentPlatform === p) generateDeploys(oldCloudData.deploys);
+        }
 
         function startApp() {
             document.getElementById('loginOverlay').style.display = 'none';
@@ -252,8 +258,8 @@
             container.innerHTML = "";
             const filter = document.getElementById('filterKeyword').value.toUpperCase();
             
-            let totalBoites = currentPlatform === 'WEB' ? 100 : (currentPlatform === 'SELENIUM' ? 75 : 20);
-            let boitesPerDeploy = num > 0 ? Math.floor(totalBoites / num) : 0;
+            let totalB = boitesConfig[currentPlatform] || 0;
+            let boitesPerDeploy = num > 0 ? Math.floor(totalB / num) : 0;
 
             for (let i = 0; i < num; i++) {
                 const d = (savedData && savedData[i]) ? savedData[i] : { from: '', id: '', batch: '10/3000P', rules: 'SELECT ALL IPS', ips: '' };
@@ -262,7 +268,7 @@
                 container.innerHTML += `
                     <div class="deploy-card bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
                         <div class="flex justify-between items-center mb-2">
-                            <span class="text-[10px] font-black uppercase text-slate-400 tracking-widest">Deploy ${i+1}</span>
+                            <span class="text-[10px] font-black uppercase text-slate-400">Deploy ${i+1}</span>
                             <span class="bg-blue-600 text-white px-3 py-1 rounded-full text-[10px] font-black italic shadow-sm">${boitesPerDeploy} BOITES</span>
                         </div>
                         <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2">
@@ -284,7 +290,7 @@
                                 <option value="2 ips RANDOM ON SERVER SELECTED" ${d.rules == '2 ips RANDOM ON SERVER SELECTED' ? 'selected' : ''}>2 ips RANDOM ON SERVER SELECTED</option>
                             </select>
                         </div>
-                        <textarea oninput="compareData()" class="ips-val w-full p-2 border rounded text-[10px] font-mono bg-slate-50" rows="${userRole==='viewer'?3:1}" placeholder="IPs...">${d.ips || ''}</textarea>
+                        <textarea oninput="compareData()" class="ips-val w-full p-2 border rounded text-[10px] font-mono bg-slate-50" rows="${userRole==='viewer'?3:1}">${d.ips || ''}</textarea>
                     </div>`;
             }
         }
@@ -294,28 +300,21 @@
             if(!oldCloudData) return diffs;
             const curFilter = document.getElementById('filterKeyword').value;
             if (curFilter !== (oldCloudData.filter || "")) diffs.push(`Filter: ${curFilter}`);
-            
             const curDeploys = Array.from(document.querySelectorAll('.deploy-card')).map((c, idx) => ({
-                idx: idx + 1,
-                from: c.querySelector('.from-val').value,
-                id: c.querySelector('.id-val').value,
-                batch: c.querySelector('.batch-val').value,
-                rules: c.querySelector('.rules-val').value,
-                ips: c.querySelector('.ips-val').value
+                idx: idx + 1, from: c.querySelector('.from-val').value, id: c.querySelector('.id-val').value,
+                batch: c.querySelector('.batch-val').value, rules: c.querySelector('.rules-val').value, ips: c.querySelector('.ips-val').value
             }));
-
             const oldDeploys = oldCloudData.deploys || [];
-            if (curDeploys.length !== oldDeploys.length) diffs.push(`Deploy count changed`);
-
+            if (curDeploys.length !== oldDeploys.length) diffs.push(`Count changed`);
             curDeploys.forEach((d, i) => {
                 const old = oldDeploys[i] || {};
-                let dCh = [];
-                if (d.from !== (old.from || "")) dCh.push("from");
-                if (d.id !== (old.id || "")) dCh.push("id");
-                if (d.batch !== (old.batch || "")) dCh.push("batch");
-                if (d.rules !== (old.rules || "")) dCh.push("rules");
-                if (d.ips !== (old.ips || "")) dCh.push("ips");
-                if (dCh.length > 0) diffs.push(`Deploy ${d.idx}: [${dCh.join(', ')}]`);
+                let ch = [];
+                if (d.from !== (old.from || "")) ch.push("from");
+                if (d.id !== (old.id || "")) ch.push("id");
+                if (d.batch !== (old.batch || "")) ch.push("batch");
+                if (d.rules !== (old.rules || "")) ch.push("rules");
+                if (d.ips !== (old.ips || "")) ch.push("ips");
+                if (ch.length > 0) diffs.push(`D${d.idx}: [${ch.join(',')}]`);
             });
             return diffs;
         }
@@ -364,7 +363,7 @@
             list.innerHTML = ''; opts.forEach(opt => { const btn = document.createElement('button'); btn.className = "p-3 text-left hover:bg-slate-50 font-bold text-xs border-b"; btn.innerText = opt; btn.onclick = () => { addActionUI(type, opt, 0); closeModal(); }; list.appendChild(btn); });
             document.getElementById('actionModal').classList.remove('hidden');
         }
-        function checkAccess() { const input = document.getElementById('accessKey').value; if (input === SUPER_KEY || input === ADMIN_KEY) { localStorage.setItem('ems4_key', input); location.reload(); } else { alert("Access Denied!"); } }
+        function checkAccess() { const input = document.getElementById('accessKey').value; if (input === SUPER_KEY || input === ADMIN_KEY) { localStorage.setItem('ems4_key', input); location.reload(); } else { alert("Denied!"); } }
         function logout() { localStorage.removeItem('ems4_key'); location.reload(); }
         function changePlat(p) { if(userRole !== 'viewer') selectPlatform(p); }
         function toggleRotationDetails() { document.getElementById('rotationDetailsBox').classList.toggle('hidden'); }
